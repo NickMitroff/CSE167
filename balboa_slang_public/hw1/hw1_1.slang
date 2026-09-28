@@ -14,7 +14,6 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
     uint2 coords = uint2(tid.x, height - tid.y);
     float2 screen_center = float2(center.x, height - center.y);
     image[coords] = float4(0.5, 0.5, 0.5, 1);
-    // TODO: your code here
 
     float2 offset_vec = coords - screen_center;
     if (length(offset_vec) <= radius) {
