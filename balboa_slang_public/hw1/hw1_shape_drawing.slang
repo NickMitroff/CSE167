@@ -25,7 +25,7 @@ bool draw_circle_fill(uint2 coords, uint height, float2 center, float radius, fl
     float2 offset_vec = coords - screen_center;
 
     if (length(offset_vec) <= radius) {
-        image[coords] = fill_rgba;
+        set_pixel_with_alpha(coords, fill_rgba, image);
         return true;
     }
     return false;
@@ -41,8 +41,17 @@ bool draw_circle_stroke(uint2 coords, uint height,
     float half_width = stroke_width / 2;
 
     if (distance <= radius + half_width && distance >= radius - half_width) {
-        image[coords] = stroke_rgba;
+        set_pixel_with_alpha(coords, stroke_rgba, image);
         return true;
     }
     return false;
+}
+
+void set_pixel_with_alpha(uint2 coords, float4 color_rgba, RWTexture2D<float4> image) {
+    float4 background = image[coords];
+    float4 c0 = float4(color_rgba.x, color_rgba.y, color_rgba.z, 1.0);
+    float a0 = color_rgba.w;
+    float4 new_color = a0 * c0 + (1 - a0) * background;
+    image[coords] = new_color;
+
 }
