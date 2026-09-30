@@ -50,13 +50,24 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
 
             if (line_up) count++;
             else count--;
+            
+            //Calculate Magnitude 
+            float pntMagnitude = length(p1-p0);
+            if(pntMagnitude == 0.0) continue; 
+            float l = dot((p1-p0),(q-p0)) / pntMagnitude;
+            if (l <=0 || l >= pntMagnitude) continue; 
+            float2 q2 = p0 + l * ((p1-p0)/pntMagnitude);
+            float compare = length(q-q2); 
+            use_stroke_color = compare < stroke_width/2; 
         }
 
         use_fill_color = count != 0;
     }
 
-    if (use_fill_color) {
+    if(use_stroke_color){
+        image[screen_pos] = float4(stroke_color, 1.0);
+    }
+    else if (use_fill_color) {
         image[screen_pos] = float4(fill_color, 1.0);
     }
-    
 }
