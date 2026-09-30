@@ -22,7 +22,8 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
 
     image[screen_pos] = float4(1.0);
 
-    
+    bool should_apply_stroke = false;
+
     uint2 q = tid;
     int iterations = is_closed ? num_polyline : num_polyline - 1;
     if (is_closed) {
@@ -39,35 +40,49 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
 
             float t;
 
-            if (p1.y != p0.y) t = (q.y - p0.y) / (p1.y - p0.y);
-            else continue;               // if a line lies completely flat, we ignore it
-            if (t < 0 || t > 1) continue; // if this polyline is entirely above/below point q
-            // edge case where the test point is on a vertex (where two polylines intersect)
-            if (t == 0 && line_up) continue; 
-            if (t == 1 && !line_up) continue;
-            float s = p0.x + t * (p1.x - p0.x) - q.x;
-            if (s < 0) continue; // if the point to test is left of the point q
-
-            if (line_up) count++;
-            else count--;
+            if (ray_intersects_polyline(q, p0, p1, line_up)) {
+                    if (line_up) count++;
+                    else count--;
+            }
             
-            //Calculate Magnitude 
-            float pntMagnitude = length(p1-p0);
-            if(pntMagnitude == 0.0) continue; 
-            float l = dot((p1-p0),(q-p0)) / pntMagnitude;
-            if (l <=0 || l >= pntMagnitude) continue; 
-            float2 q2 = p0 + l * ((p1-p0)/pntMagnitude);
-            float compare = length(q-q2); 
-            use_stroke_color = compare < stroke_width/2; 
+            //Calculate Magnitude
+            if (use_stroke_color) {
+                if (point_is_in_stroke_range(q, p0, p1, stroke_width)) should_apply_stroke = true;
+            }
+            // use_stroke_color = compare < stroke_width/2; 
         }
 
         use_fill_color = count != 0;
     }
 
-    if(use_stroke_color){
+    if(should_apply_stroke){
         image[screen_pos] = float4(stroke_color, 1.0);
     }
     else if (use_fill_color) {
         image[screen_pos] = float4(fill_color, 1.0);
     }
+}
+
+bool ray_intersects_polyline(float2 q, float2 p0, float2 p1, bool line_up) {
+    float t;
+    if (p1.y != p0.y) t = (q.y - p0.y) / (p1.y - p0.y);
+    else return false; // if a line lies completely flat, we ignore it
+    if (t < 0 || t > 1) return false; // if this polyline is entirely above/below point q
+    // edge case where the test point is on a vertex (where two polylines intersect)
+    if (t == 0 && line_up) return false;
+    if (t == 1 && !line_up) return false;
+    float s = p0.x + t * (p1.x - p0.x) - q.x;
+    if (s < 0) return false; // if the point to test is left of the point q
+    return true;
+}
+
+bool point_is_in_stroke_range(float2 q, float2 p0, float2 p1, float stroke_width) {
+    float pntMagnitude = length(p1 - p0);
+    if (pntMagnitude == 0.0) return false;
+    float l = dot((p1 - p0), (q - p0)) / pntMagnitude;
+    if (l <= 0 || l >= pntMagnitude) return false;
+    float2 q2 = p0 + l * ((p1 - p0) / pntMagnitude);
+    float compare = length(q - q2);
+    if (compare < stroke_width / 2) return true;
+    return false;
 }
