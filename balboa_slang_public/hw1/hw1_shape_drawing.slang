@@ -55,31 +55,33 @@ bool draw_polyline(uint2 tid, uint2 coords,
                     RWTexture2D<float4> image){
     int num_polylines, stride;
     points.GetDimensions(num_polylines, stride); 
-    if (draw_polyline_fill(tid, coords, points, num_polylines, 
-            polyline.closed, shape.use_fill, shape.fill_rgba, 
+    if (draw_polyline_fill(tid, coords, points, 
+            polyline, shape.use_fill, shape.fill_rgba, 
             shape.use_stroke, shape.stroke_rgba, shape.stroke_width, 
             image)) return true; 
     return false; 
 }
 
 bool draw_polyline_fill(uint2 q, uint2 screen_pos, 
-                        StructuredBuffer<float2> polyline, 
-                        int num_polyline, bool is_closed, 
+                        StructuredBuffer<float2> points, 
+                        Polyline pl, 
                         bool use_fill_color, float4 fill_color, 
                         bool use_stroke_color, float4 stroke_color,
                         float stroke_width, 
                         RWTexture2D<float4> image){
     bool apply_stroke = false; 
+    bool is_closed = pl.closed;
+    int num_polyline = pl.pts_end - pl.pts_begin + 1;
     int iterations = is_closed ? num_polyline: num_polyline - 1; 
     if(is_closed){
         int count = 0; 
-        for(uint i = 0; i < num_polyline; i++){
+        for(uint i = pl.pts_begin; i < pl.pts_begin + num_polyline; i++){
             float2 p0; 
             float2 p1;
             bool line_up; 
 
-            p0 = polyline[i];
-            p1 = polyline[i == num_polyline - 1 ? 0 : i + 1];
+            p0 = points[i];
+            p1 = points[i == pl.pts_begin + num_polyline - 1 ? pl.pts_begin : i + 1];
 
             line_up = p1.y > p0.y;
             

@@ -22,5 +22,10 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
     uint2 screen_pos = uint2(tid.x, height - tid.y);
     image[screen_pos] = float4(1.0);
 
-    draw_polyline_fill(tid, screen_pos, polyline, num_polyline, is_closed, use_fill_color, float4(fill_color,1.0), use_stroke_color, float4(stroke_color,1.0), stroke_width, image);
+    Polyline pl;
+    pl.closed = is_closed;
+    pl.pts_begin = 0;
+    pl.pts_end = num_polyline - 1;
+
+    draw_polyline_fill(tid, screen_pos, polyline, pl, use_fill_color, float4(fill_color,1.0), use_stroke_color, float4(stroke_color,1.0), stroke_width, image);
 }
