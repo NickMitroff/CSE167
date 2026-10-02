@@ -49,8 +49,7 @@ bool draw_circle_stroke(uint2 coords, uint height,
 
 //Drawing Polylines
 bool draw_polyline(uint2 tid, uint2 coords, 
-                    uint height, Shape shape, 
-                    Polyline polyline, 
+                    Shape shape, Polyline polyline, 
                     StructuredBuffer<float2> points,
                     RWTexture2D<float4> image){
     int num_polylines, stride;
@@ -71,7 +70,7 @@ bool draw_polyline_fill(uint2 q, uint2 screen_pos,
                         RWTexture2D<float4> image){
     bool apply_stroke = false; 
     bool is_closed = pl.closed;
-    int num_polyline = pl.pts_end - pl.pts_begin + 1;
+    int num_polyline = pl.pts_end - pl.pts_begin;
     int iterations = is_closed ? num_polyline: num_polyline - 1; 
     if(is_closed){
         int count = 0; 

@@ -33,9 +33,7 @@ void compute_main(uint2 tid: SV_DispatchThreadID,
         }
         if(shape.type == ShapeType.Polyline){
             Polyline polyline = polylines[shape.index];
-            int num_polylines, stride;
-            points.GetDimensions(num_polylines, stride); 
-            //draw_polyline_fill(tid, coords, polylines, num_polyline, polyline.closed, shape.use_fill, shape.rgba, ); 
+            draw_polyline(tid, coords,shape, polyline, points, image);
         }
     }
 }
