@@ -54,14 +54,14 @@ bool draw_polyline(uint2 tid, uint2 coords,
                     RWTexture2D<float4> image){
     int num_polylines, stride;
     points.GetDimensions(num_polylines, stride); 
-    if (draw_polyline_fill(tid, coords, points, 
+    if (draw_polyline_fill_stroke(tid, coords, points, 
             polyline, shape.use_fill, shape.fill_rgba, 
             shape.use_stroke, shape.stroke_rgba, shape.stroke_width, 
             image)) return true; 
     return false; 
 }
 
-bool draw_polyline_fill(uint2 q, uint2 screen_pos, 
+bool draw_polyline_fill_stroke(uint2 q, uint2 screen_pos, 
                         StructuredBuffer<float2> points, 
                         Polyline pl, 
                         bool use_fill_color, float4 fill_color, 
@@ -69,45 +69,48 @@ bool draw_polyline_fill(uint2 q, uint2 screen_pos,
                         float stroke_width, 
                         RWTexture2D<float4> image){
     bool apply_stroke = false; 
+    bool apply_fill = false;
     bool is_closed = pl.closed;
     int num_polyline = pl.pts_end - pl.pts_begin;
-    int iterations = is_closed ? num_polyline: num_polyline - 1; 
-    if(is_closed){
+    int iterations = is_closed ? num_polyline : num_polyline - 1; 
+    
         int count = 0; 
-        for(uint i = pl.pts_begin; i < pl.pts_begin + num_polyline; i++){
+        for(uint i = pl.pts_begin; i < pl.pts_begin + iterations; i++){
             float2 p0; 
             float2 p1;
             bool line_up; 
 
             p0 = points[i];
+            // if the polyline is NOT closed, then don't iterate from last point back to start
+            // which means using num_polyline-1 instead of iterations
             p1 = points[i == pl.pts_begin + num_polyline - 1 ? pl.pts_begin : i + 1];
 
             line_up = p1.y > p0.y;
+            if (use_fill_color) {
+                if(ray_intersects_polyline(q, p0, p1, line_up)){
+                    if (line_up) count++;
+                        else count--;
+                }
+                apply_fill = count != 0;
+            } 
             
-            if(ray_intersects_polyline(q, p0, p1, line_up)){
-                if (line_up) count++;
-                    else count--;
-            }
 
             //Calculate Magnitude
             if (use_stroke_color) {
                 if (point_is_in_stroke_range(q, p0, p1, stroke_width)) apply_stroke = true;
             }
 
-            use_fill_color = count != 0; 
         }
+    
+    if(apply_fill){
+        set_pixel_with_alpha(screen_pos, fill_color, image);
     }
 
     if(apply_stroke){
-        image[screen_pos] = float4(stroke_color);
-        return true; 
-    }
-    else if(use_fill_color){
-        image[screen_pos] = float4(fill_color); 
-        return true; 
+        set_pixel_with_alpha(screen_pos, stroke_color, image);
     }
 
-    return false; 
+    return apply_fill || apply_stroke; 
 }
 
 bool ray_intersects_polyline(float2 q, float2 p0, float2 p1, bool line_up) {

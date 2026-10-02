@@ -27,5 +27,5 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
     pl.pts_begin = 0;
     pl.pts_end = num_polyline;
 
-    draw_polyline_fill(tid, screen_pos, polyline, pl, use_fill_color, float4(fill_color,1.0), use_stroke_color, float4(stroke_color,1.0), stroke_width, image);
+    draw_polyline_fill_stroke(tid, screen_pos, polyline, pl, use_fill_color, float4(fill_color,1.0), use_stroke_color, float4(stroke_color,1.0), stroke_width, image);
 }
