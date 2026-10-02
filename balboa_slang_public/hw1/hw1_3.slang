@@ -31,5 +31,11 @@ void compute_main(uint2 tid: SV_DispatchThreadID,
             Circle circle = circles[shape.index];
             draw_circle(coords, height, shape, circle, image);
         }
+        if(shape.type == ShapeType.Polyline){
+            Polyline polyline = polylines[shape.index];
+            int num_polylines, stride;
+            points.GetDimensions(num_polylines, stride); 
+            //draw_polyline_fill(tid, coords, polylines, num_polyline, polyline.closed, shape.use_fill, shape.rgba, ); 
+        }
     }
 }

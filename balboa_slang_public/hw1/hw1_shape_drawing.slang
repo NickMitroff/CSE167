@@ -47,6 +47,92 @@ bool draw_circle_stroke(uint2 coords, uint height,
     return false;
 }
 
+//Drawing Polylines
+bool draw_polyline(uint2 tid, uint2 coords, 
+                    uint height, Shape shape, 
+                    Polyline polyline, 
+                    StructuredBuffer<float2> points,
+                    RWTexture2D<float4> image){
+    int num_polylines, stride;
+    points.GetDimensions(num_polylines, stride); 
+    if (draw_polyline_fill(tid, coords, points, num_polylines, 
+            polyline.closed, shape.use_fill, shape.fill_rgba, 
+            shape.use_stroke, shape.stroke_rgba, shape.stroke_width, 
+            image)) return true; 
+    return false; 
+}
+
+bool draw_polyline_fill(uint2 q, uint2 screen_pos, 
+                        StructuredBuffer<float2> polyline, 
+                        int num_polyline, bool is_closed, 
+                        bool use_fill_color, float4 fill_color, 
+                        bool use_stroke_color, float4 stroke_color,
+                        float stroke_width, 
+                        RWTexture2D<float4> image){
+    bool apply_stroke = false; 
+    int iterations = is_closed ? num_polyline: num_polyline - 1; 
+    if(is_closed){
+        int count = 0; 
+        for(uint i = 0; i < num_polyline; i++){
+            float2 p0; 
+            float2 p1;
+            bool line_up; 
+
+            p0 = polyline[i];
+            p1 = polyline[i == num_polyline - 1 ? 0 : i + 1];
+
+            line_up = p1.y > p0.y;
+            
+            if(ray_intersects_polyline(q, p0, p1, line_up)){
+                if (line_up) count++;
+                    else count--;
+            }
+
+            //Calculate Magnitude
+            if (use_stroke_color) {
+                if (point_is_in_stroke_range(q, p0, p1, stroke_width)) apply_stroke = true;
+            }
+
+            use_fill_color = count != 0; 
+        }
+    }
+
+    if(apply_stroke){
+        image[screen_pos] = float4(stroke_color);
+        return true; 
+    }
+    else if(use_fill_color){
+        image[screen_pos] = float4(fill_color); 
+        return true; 
+    }
+
+    return false; 
+}
+
+bool ray_intersects_polyline(float2 q, float2 p0, float2 p1, bool line_up) {
+    float t;
+    if (p1.y != p0.y) t = (q.y - p0.y) / (p1.y - p0.y);
+    else return false; // if a line lies completely flat, we ignore it
+    if (t < 0 || t > 1) return false; // if this polyline is entirely above/below point q
+    // edge case where the test point is on a vertex (where two polylines intersect)
+    if (t == 0 && line_up) return false;
+    if (t == 1 && !line_up) return false;
+    float s = p0.x + t * (p1.x - p0.x) - q.x;
+    if (s < 0) return false; // if the point to test is left of the point q
+    return true;
+}
+
+bool point_is_in_stroke_range(float2 q, float2 p0, float2 p1, float stroke_width) {
+    float pntMagnitude = length(p1 - p0);
+    if (pntMagnitude == 0.0) return false;
+    float l = dot((p1 - p0), (q - p0)) / pntMagnitude;
+    if (l <= 0 || l >= pntMagnitude) return false;
+    float2 q2 = p0 + l * ((p1 - p0) / pntMagnitude);
+    float compare = length(q - q2);
+    if (compare < stroke_width / 2) return true;
+    return false;
+}
+
 void set_pixel_with_alpha(uint2 coords, float4 color_rgba, RWTexture2D<float4> image) {
     float4 background = image[coords];
     float4 c0 = float4(color_rgba.x, color_rgba.y, color_rgba.z, 1.0);
