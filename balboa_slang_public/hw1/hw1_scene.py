@@ -192,7 +192,23 @@ def compose_transformation(transforms):
     for transform in transforms:
         pass
         # TODO: your code here
-
+        T = np.eye(3,dtype=np.float32)
+        if transform == "scalar":
+            T[1,1] = transform[0]
+            T[2,2] = transform[1]
+        elif transform == "shear_x":
+            T[1,2] = transform[0]
+        elif transform == "shear_y":
+            T[2,1] = transform[0]
+        elif transform == "rotate":
+            T[1,1] = math.cos(transform[0])
+            T[1,2] = -math.sin(transform[0])
+            T[2,1] = math.sin(transform[0])
+            T[2,2] = math.cos(transform[0])
+        elif transform == "translate":
+            T[1, 3] = transform[0]
+            T[2, 3] = transform[1]
+        F = np.dot(F, T)
     return F
 
 def interpolate_transformation(transform_keyframes, t):

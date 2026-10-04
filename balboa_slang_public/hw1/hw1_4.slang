@@ -1,4 +1,5 @@
 import hw1_common;
+import hw1_shape_drawing;
 
 [shader("compute")]
 [numthreads(8, 8, 1)]
@@ -20,4 +21,17 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
 
     image[tid] = float4(1.0);
     // TODO: your code here
+
+    for (uint i = 0; i < num_shapes; i++) {
+        // for alpha test, draw the shapes BACK to FRONT
+        Shape shape = shapes[num_shapes - i - 1];
+        if (shape.type == ShapeType.Circle) {
+            Circle circle = circles[shape.index];
+            draw_circle(tid, height, shape, circle, image);
+        }
+        if(shape.type == ShapeType.Polyline){
+            Polyline polyline = polylines[shape.index];
+            draw_polyline(tid, tid ,shape, polyline, points, image);
+        }
+    }
 }
