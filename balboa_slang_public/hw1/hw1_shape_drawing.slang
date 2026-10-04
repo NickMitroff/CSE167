@@ -52,8 +52,6 @@ bool draw_polyline(uint2 tid, uint2 coords,
                     Shape shape, Polyline polyline, 
                     StructuredBuffer<float2> points,
                     RWTexture2D<float4> image){
-    int num_polylines, stride;
-    points.GetDimensions(num_polylines, stride); 
     if (draw_polyline_fill_stroke(tid, coords, points, 
             polyline, shape.use_fill, shape.fill_rgba, 
             shape.use_stroke, shape.stroke_rgba, shape.stroke_width, 
