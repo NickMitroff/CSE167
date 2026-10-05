@@ -7,7 +7,10 @@ bool draw_bezier(uint2 tid, uint2 coords,
                     RWTexture2D<float4> image) {
     bool set_pixel = false;
     if (shape.use_fill && bezier.closed) {
-        set_pixel = draw_bezier_fill(tid, coords, shape, bezier, points, image);
+        if (draw_bezier_fill(tid, coords, shape, bezier, points, image)) set_pixel = true;
+    }
+    if (shape.use_stroke) {
+        if (draw_bezier_stroke(tid, coords, shape, bezier, points, image)) set_pixel = true;
     }
 
     return set_pixel;
@@ -40,13 +43,12 @@ bool draw_bezier_fill(uint2 tid, uint2 coords,
         float2 p0 = points[indices.x];
         float2 p1 = points[indices.y];
         float2 p2 = points[indices.z];
-        if (p0.x == p1.x && p1.x == p2.x && p0.y == p1.y && p1.y == p2.y) continue;
         if (ray_intersects_bezier(q, p0, p1, p2, line_up, debug_draw)) {
             if (line_up) count++;
             else count--;
         }
 
-        //// Uncomment to include debug drawings ////
+        //// Uncomment to draw a bunch of circles for debugging ////
         // draw_circle_fill(coords, 500, p0, 6 + 2 * i, float4(0, 1, 0, 1), image);
         // draw_circle_fill(coords, 500, p1, 6 + 2 * i, float4(0, 1, 1, 1), image);
         
@@ -86,6 +88,91 @@ bool draw_bezier_stroke(uint2 tid, uint2 coords,
                     Shape shape, QuadraticBezier bezier, 
                     StructuredBuffer<float2> points,
                     RWTexture2D<float4> image) {
+
+    int itr_start = bezier.pts_begin;
+    int itr_end = bezier.pts_end;
+    
+    float2 d = tid;
+    int count = 0;
+    bool line_up = false;
+    bool debug_draw = false;
+    for (int i = itr_start; i <= itr_end - 1; i += 2) {
+        int3 indices;
+        if (i + 2 < itr_end) {
+            indices = int3(i, i+1, i+2);
+        }
+        else if (bezier.closed) {
+            indices = int3(itr_end - 2, itr_end - 1, itr_start);
+        }
+        else continue;
+    
+    
+        float2 a = points[indices.x];
+        float2 b = points[indices.y];
+        float2 c = points[indices.z];
+
+
+        
+
+        // LLM DISCLOSURE:
+        // To avoid the headache of computing a bunch of 4th-degree polynomials,
+        // I used AI tools to help with polynomial math
+        // WolframAlpha & SymboLab were used to expand out the f(t) equation
+        // and obtain the derivative
+        // OpenAI Codex was used to extract the coefficients and write
+        // the below snippet of code storing them in variables t3, t2, t1, and t0
+        // -Nick
+        
+        float2 t3 =  4*a*a + 16*b*b + 4*c*c + 8*c*a
+          - 16*a*b - 16*c*b;
+
+        float2 t2 = -12*a*a - 24*b*b - 12*c*a
+                + 36*a*b + 12*c*b;
+
+        float2 t1 =  12*a*a + 8*b*b + 4*c*a
+                - 24*a*b - 4*c*d + 8*d*b - 4*d*a;
+
+        float2 t0 = 4*a*b - 4*a*a - 4*d*b + 4*d*a;
+
+        // ^^ the code written by AI ^^
+
+        float3 solutions = float3(0, 0, 0);
+        float t = 100;
+        solve_cubic(t3.x + t3.y, t2.x + t2.y, t1.x + t1.y, t0.x + t0.y, solutions);
+        //else return false;
+        float2 p0 = a;
+        float2 p1 = b;
+        float2 p2 = c;
+        float2 q = d;
+        if (solutions.x > 0 && solutions.x <= 1) t = solutions.x;
+        if (solutions.y > 0 && solutions.y <= 1) t = solutions.y;
+        if (solutions.z > 0 && solutions.z <= 1) t = solutions.z;
+        // float2 solutions = float2(0, 0);
+        // float t;
+        // solve_quadratic(0, -1, 250, solutions);
+        // //else return false;
+        // float2 p0 = a;
+        // float2 p1 = b;
+        // float2 p2 = c;
+        // float2 q = d;
+        // if (solutions.x > 0 && solutions.x <= 1000) t = solutions.x;
+        // else if (solutions.y > 0 && solutions.y <= 1000) t = solutions.y;
+
+        float2 closest_point = float2(
+            (1 - t) * (1 - t) * p0.x
+                + 2 * (1 - t) * t * p1.x
+                + t * t * p2.x,
+            (1 - t) * (1 - t) * p0.y
+                + 2 * (1 - t) * t * p1.y
+                + t * t * p2.y,
+        );
+        
+        if (length(closest_point - q) <= shape.stroke_width / 2) {
+            set_pixel_with_alpha(coords, shape.stroke_rgba, image);
+            return true;
+        }
+    }
+    
     return false;
 }
 
@@ -94,6 +181,7 @@ bool ray_intersects_bezier(float2 q, float2 p0, float2 p1, float2 p2, out bool l
     float2 solutions;
     bool root_x_valid = false;
     bool root_y_valid = false;
+    debug_draw = false;
     
     float t;
     line_up = false;

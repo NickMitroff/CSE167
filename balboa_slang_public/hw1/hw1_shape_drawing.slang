@@ -7,16 +7,16 @@ bool draw_circle(uint2 coords, uint height,
     float2 screen_center = float2(circle.center.x, height - circle.center.y);
 
     float2 offset_vec = coords - screen_center;
-
+    bool set_pixel = false;
     if (shape.use_stroke) {
         if (draw_circle_stroke(coords, height,
-            circle.center, circle.radius, shape.stroke_width, shape.stroke_rgba, image)) return true;
+            circle.center, circle.radius, shape.stroke_width, shape.stroke_rgba, image)) set_pixel = true;
     }
     if (shape.use_fill) {
         if (draw_circle_fill(coords, height, 
-            circle.center, circle.radius, shape.fill_rgba, image)) return true;
+            circle.center, circle.radius, shape.fill_rgba, image)) set_pixel = true;
     }
-    return false;
+    return set_pixel;
 }
 
 bool draw_circle_fill(uint2 coords, uint height, float2 center, float radius, float4 fill_rgba, RWTexture2D<float4> image) {
