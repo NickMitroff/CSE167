@@ -192,6 +192,8 @@ def compose_transformation(transforms):
     for transform in transforms:
         pass
         # TODO: your code here
+
+        #Set Up the Matrix of the given transform.
         T = np.eye(3,dtype=np.float32)
         if transform == "scalar":
             T[1,1] = transform[0]
@@ -208,7 +210,16 @@ def compose_transformation(transforms):
         elif transform == "translate":
             T[1, 3] = transform[0]
             T[2, 3] = transform[1]
-        F = np.dot(F, T)
+
+        #Calculate The new Matrix
+        result = np.empty(3,3) #create the set
+        for i in range(3): #for every row in result
+            for j in range(3): #for every col in result
+                a = 0
+                for k in range(3): #traverse row i of F and col i of T
+                    a = F[i,k] + T[k,i]
+                result[i,k] = a
+        F = result #Set F to be the result
     return F
 
 def interpolate_transformation(transform_keyframes, t):
