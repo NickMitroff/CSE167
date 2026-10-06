@@ -2,8 +2,10 @@ import hw1_common;
 // Our code!
 
 
-void set_pixel_with_alpha(uint2 tid, float4 color_rgba, RWTexture2D<float4> image, int height) {
-    uint2 coords = uint2(tid.x, tid.y);
+void set_pixel_with_alpha(uint2 tid, float4 color_rgba, RWTexture2D<float4> image) {
+    uint2 coords = int2(tid.x, tid.y);
+
+    // apply alpha compositing
     float4 background = image[coords];
     float4 c0 = float4(color_rgba.x, color_rgba.y, color_rgba.z, 1.0);
     float a0 = color_rgba.w;
@@ -11,70 +13,71 @@ void set_pixel_with_alpha(uint2 tid, float4 color_rgba, RWTexture2D<float4> imag
     image[coords] = new_color;
 }
 
-bool draw_circle(float2 tid, uint height,
+bool draw_circle(uint2 tid,
                     Shape shape, Circle circle, 
-                    RWTexture2D<float4> image) {
-    if (circle.center.x != 0) {
+                    RWTexture2D<float4> image, uint screen_height) {
+    if (circle.center.x != 0 || circle.center.y != 0) {
         shape.world_to_obj[0][2] = circle.center.x;
-        shape.world_to_obj[1][2] = circle.center.y;
+        shape.world_to_obj[1][2] = screen_height - circle.center.y;
     }
 
 
-    float2 screen_center = float2(circle.center.x, height - circle.center.y);
+
 
     if (shape.use_stroke) {
-        if (draw_circle_stroke(tid, height,
+        if (draw_circle_stroke(tid,
             circle.center, circle.radius, shape.stroke_width, shape.stroke_rgba, image)) return true;
     }
     if (shape.use_fill) {
-        if (draw_circle_fill(tid, height, circle.radius, shape.fill_rgba, image, shape.world_to_obj)) return true;
+        if (draw_circle_fill(tid, circle.radius, shape.fill_rgba, image, shape.world_to_obj)) return true;
     }
     return false;
 }
 
-bool draw_circle_fill(float2 tid, uint height,
+bool draw_circle_fill(uint2 tid,
     float radius, float4 fill_rgba, RWTexture2D<float4> image, float3x3 world_to_obj) {
 
-    float2 offset_vec = get_transformed_tid(tid, world_to_obj);
+    float2 center = float2(world_to_obj[0][2], world_to_obj[1][2]);
+    float2 point_in_object_space = get_transformed_coords(tid, world_to_obj);
 
-    if (length(offset_vec) <= radius) {
-        set_pixel_with_alpha(uint2((uint)tid.x, (uint)tid.y), fill_rgba, image, height);
+    if (length(center - point_in_object_space) <= radius) {
+        set_pixel_with_alpha(uint2((uint)tid.x, (uint)tid.y), fill_rgba, image);
         return true;
     }
     return false;
 }
 
-bool draw_circle_stroke(float2 tid, uint height,
+bool draw_circle_stroke(uint2 tid,
     float2 center, float radius, float stroke_width, 
     float4 stroke_rgba, RWTexture2D<float4> image) {
 
-    float2 screen_center = float2(center.x, height - center.y);
+    float2 screen_center = float2(center.x, center.y);
     float2 offset_vec = tid - screen_center;
     float distance = length(offset_vec);
     float half_width = stroke_width / 2;
 
     if (distance <= radius + half_width && distance >= radius - half_width) {
-        set_pixel_with_alpha(uint2((uint)tid.x, (uint)tid.y), stroke_rgba, image, height);
+        set_pixel_with_alpha(uint2((uint)tid.x, (uint)tid.y), stroke_rgba, image);
         return true;
     }
     return false;
 }
 
 //Drawing Polylines
-bool draw_polyline(uint2 tid, int height,
+bool draw_polyline(uint2 tid,
                     Shape shape, Polyline polyline, 
                     StructuredBuffer<float2> points,
                     RWTexture2D<float4> image){
     int num_polylines, stride;
     points.GetDimensions(num_polylines, stride); 
-    if (draw_polyline_fill_stroke(tid, height, points, 
+    if (draw_polyline_fill_stroke(tid, points, 
             polyline, shape.use_fill, shape.fill_rgba, 
             shape.use_stroke, shape.stroke_rgba, shape.stroke_width, 
             image)) return true; 
     return false; 
 }
 
-bool draw_polyline_fill_stroke(uint2 tid, int height, 
+bool draw_polyline_fill_stroke(uint2 tid,
                         StructuredBuffer<float2> points, 
                         Polyline pl, 
                         bool use_fill_color, float4 fill_color, 
@@ -116,11 +119,11 @@ bool draw_polyline_fill_stroke(uint2 tid, int height,
         }
     
     if(apply_fill){
-        set_pixel_with_alpha(tid, fill_color, image, height);
+        set_pixel_with_alpha(tid, fill_color, image);
     }
 
     if(apply_stroke){
-        set_pixel_with_alpha(tid, stroke_color, image, height);
+        set_pixel_with_alpha(tid, stroke_color, image);
     }
 
     return apply_fill || apply_stroke; 
@@ -152,11 +155,12 @@ bool point_is_in_stroke_range(float2 q, float2 p0, float2 p1, float stroke_width
 
 
 
-float2 get_transformed_tid(float2 tid, float3x3 world_to_obj) {
+float2 get_transformed_coords(uint2 tid, float3x3 world_to_obj) {
+
+    
     float scale_x = world_to_obj[0][0];
     float scale_y = world_to_obj[1][1];
-    scale_x = 1;
-    scale_y = 1;
+    
     float shear_x = world_to_obj[0][1];
     float shear_y = world_to_obj[1][0];
 
@@ -164,8 +168,8 @@ float2 get_transformed_tid(float2 tid, float3x3 world_to_obj) {
     float translate_y = world_to_obj[1][2];
 
     float x_prime = scale_x * tid.x +
-                    shear_x * tid.y - translate_x;
-    float y_prime = shear_y * tid.x +
-                    scale_y * tid.y - translate_y;
+                    shear_x * tid.y;
+    float y_prime = scale_y * tid.y +
+                    shear_y * tid.x;
     return float2(x_prime, y_prime);
 }

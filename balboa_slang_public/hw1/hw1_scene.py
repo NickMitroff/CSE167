@@ -200,6 +200,9 @@ def compose_transformation(transforms):
             print(transform['scale'][0])
             F[0,0] *= transform['scale'][0]
             F[1,1] *= transform['scale'][1]
+        elif 'translate' in transform:
+            F[0, 2] = transform['translate'][0]
+            F[1, 2] = transform['translate'][1]
         # elif transform == "shear_x":
         #     T[1,2] = transform[0]
         # elif transform == "shear_y":
@@ -247,11 +250,14 @@ def upload_scene(scene, module, slang_device, t=0.0):
         # the shader receives the inverse because hit tests are done in object space
         if 'transform' in shape:
             obj_to_world = compose_transformation(shape['transform'])
+            print(obj_to_world)
             new_shape['world_to_obj'] = np.linalg.inv(obj_to_world)
+            print(np.linalg.inv(obj_to_world))
         if 'transform_keyframes' in shape:
             transforms = interpolate_transformation(shape['transform_keyframes'], t)
             obj_to_world = compose_transformation(transforms)
             new_shape['world_to_obj'] = np.linalg.inv(obj_to_world)
+        
         shapes.append(new_shape)
 
     return {

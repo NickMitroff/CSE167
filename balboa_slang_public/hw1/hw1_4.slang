@@ -18,8 +18,10 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
     if (tid.x >= width || tid.y >= height) {
         return;
     }
+    
+    uint2 tid_fixed = uint2(tid.x, height - tid.y);
+    image[tid_fixed] = float4(background, 1.0);
 
-    image[tid] = float4(1.0);
     // TODO: your code here
 
     for (uint i = 0; i < num_shapes; i++) {
@@ -27,11 +29,11 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
         Shape shape = shapes[num_shapes - i - 1];
         if (shape.type == ShapeType.Circle) {
             Circle circle = circles[shape.index];
-            draw_circle(tid, height, shape, circle, image);
+            draw_circle(tid_fixed, shape, circle, image, height);
         }
         if(shape.type == ShapeType.Polyline){
             Polyline polyline = polylines[shape.index];
-            draw_polyline(tid, height, shape, polyline, points, image);
+            draw_polyline(tid_fixed, shape, polyline, points, image);
         }
     }
 }
