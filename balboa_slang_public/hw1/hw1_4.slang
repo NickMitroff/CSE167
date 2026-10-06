@@ -31,7 +31,7 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
         }
         if(shape.type == ShapeType.Polyline){
             Polyline polyline = polylines[shape.index];
-            draw_polyline(tid, tid ,shape, polyline, points, image);
+            draw_polyline(tid, height, shape, polyline, points, image);
         }
     }
 }

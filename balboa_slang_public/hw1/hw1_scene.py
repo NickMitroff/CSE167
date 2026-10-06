@@ -198,8 +198,8 @@ def compose_transformation(transforms):
         T = np.eye(3,dtype=np.float32)
         if 'scale' in transform:
             print(transform['scale'][0])
-            T[0,0] = transform['scale'][0]
-            T[1,1] = transform['scale'][1]
+            F[0,0] *= transform['scale'][0]
+            F[1,1] *= transform['scale'][1]
         # elif transform == "shear_x":
         #     T[1,2] = transform[0]
         # elif transform == "shear_y":
@@ -212,7 +212,7 @@ def compose_transformation(transforms):
         # elif transform == "translate":
         #     T[1, 3] = transform[0]
         #     T[2, 3] = transform[1]
-        F = T
+        # F = T
         #Calculate The new Matrix
         # result = np.empty((3,3)) #create the set
         # for i in range(3): #for every row in result
