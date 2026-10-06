@@ -14,7 +14,7 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
 
     uint2 coords = uint2(tid.x, height - tid.y);
     image[coords] = float4(0.5, 0.5, 0.5, 1);
-    draw_circle_fill(coords, height, center, radius, float4(color, 1.0), image);
+    draw_circle_fill(coords, height, radius, float4(color, 1.0), image);
 
 }
 
