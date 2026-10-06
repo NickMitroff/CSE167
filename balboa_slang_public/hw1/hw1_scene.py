@@ -194,32 +194,34 @@ def compose_transformation(transforms):
         # TODO: your code here
 
         #Set Up the Matrix of the given transform.
+        print('scale' in transform)
         T = np.eye(3,dtype=np.float32)
-        if transform == "scalar":
-            T[1,1] = transform[0]
-            T[2,2] = transform[1]
-        elif transform == "shear_x":
-            T[1,2] = transform[0]
-        elif transform == "shear_y":
-            T[2,1] = transform[0]
-        elif transform == "rotate":
-            T[1,1] = math.cos(transform[0])
-            T[1,2] = -math.sin(transform[0])
-            T[2,1] = math.sin(transform[0])
-            T[2,2] = math.cos(transform[0])
-        elif transform == "translate":
-            T[1, 3] = transform[0]
-            T[2, 3] = transform[1]
-
+        if 'scale' in transform:
+            print(transform['scale'][0])
+            T[0,0] = transform['scale'][0]
+            T[1,1] = transform['scale'][1]
+        # elif transform == "shear_x":
+        #     T[1,2] = transform[0]
+        # elif transform == "shear_y":
+        #     T[2,1] = transform[0]
+        # elif transform == "rotate":
+        #     T[1,1] = math.cos(transform[0])
+        #     T[1,2] = -math.sin(transform[0])
+        #     T[2,1] = math.sin(transform[0])
+        #     T[2,2] = math.cos(transform[0])
+        # elif transform == "translate":
+        #     T[1, 3] = transform[0]
+        #     T[2, 3] = transform[1]
+        F = T
         #Calculate The new Matrix
-        result = np.empty(3,3) #create the set
-        for i in range(3): #for every row in result
-            for j in range(3): #for every col in result
-                a = 0
-                for k in range(3): #traverse row i of F and col i of T
-                    a = F[i,k] + T[k,i]
-                result[i,k] = a
-        F = result #Set F to be the result
+        # result = np.empty((3,3)) #create the set
+        # for i in range(3): #for every row in result
+        #     for j in range(3): #for every col in result
+        #         a = 0
+        #         for k in range(3): #traverse row i of F and col i of T
+        #             a = F[i,k] + T[k,i]
+        #         result[i,k] = a
+        # F = result #Set F to be the result
     return F
 
 def interpolate_transformation(transform_keyframes, t):

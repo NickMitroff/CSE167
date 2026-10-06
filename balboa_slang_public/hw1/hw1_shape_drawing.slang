@@ -1,9 +1,17 @@
 import hw1_common;
 // Our code!
 
-bool draw_circle(uint2 coords, uint height,
+
+
+bool draw_circle(float2 coords, uint height,
                     Shape shape, Circle circle, 
                     RWTexture2D<float4> image) {
+    if (circle.center.x != 0) {
+        shape.world_to_obj[0][2] = circle.center.x;
+        shape.world_to_obj[1][2] = circle.center.y;
+    }
+
+
     float2 screen_center = float2(circle.center.x, height - circle.center.y);
 
     float2 offset_vec = coords - screen_center;
@@ -13,25 +21,25 @@ bool draw_circle(uint2 coords, uint height,
             circle.center, circle.radius, shape.stroke_width, shape.stroke_rgba, image)) return true;
     }
     if (shape.use_fill) {
-        if (draw_circle_fill(coords, height, 
-            circle.center, circle.radius, shape.fill_rgba, image)) return true;
+        if (draw_circle_fill(coords, height, circle.radius, shape.fill_rgba, image, shape.world_to_obj)) return true;
     }
     return false;
 }
 
-bool draw_circle_fill(uint2 coords, uint height, float2 center, float radius, float4 fill_rgba, RWTexture2D<float4> image) {
+bool draw_circle_fill(float2 coords, uint height,
+    float radius, float4 fill_rgba, RWTexture2D<float4> image, float3x3 world_to_obj) {
 
-    float2 screen_center = float2(center.x, height - center.y);
+    float2 screen_center = float2(world_to_obj[0][2], height - world_to_obj[1][2]);
     float2 offset_vec = coords - screen_center;
 
     if (length(offset_vec) <= radius) {
-        set_pixel_with_alpha(coords, fill_rgba, image);
+        set_pixel_transformed(uint2((uint)coords.x, (uint)coords.y), fill_rgba, image, world_to_obj);
         return true;
     }
     return false;
 }
 
-bool draw_circle_stroke(uint2 coords, uint height,
+bool draw_circle_stroke(float2 coords, uint height,
     float2 center, float radius, float stroke_width, 
     float4 stroke_rgba, RWTexture2D<float4> image) {
 
@@ -41,7 +49,7 @@ bool draw_circle_stroke(uint2 coords, uint height,
     float half_width = stroke_width / 2;
 
     if (distance <= radius + half_width && distance >= radius - half_width) {
-        set_pixel_with_alpha(coords, stroke_rgba, image);
+        set_pixel_with_alpha(uint2((uint)coords.x, (uint)coords.y), stroke_rgba, image);
         return true;
     }
     return false;
@@ -144,4 +152,22 @@ void set_pixel_with_alpha(uint2 coords, float4 color_rgba, RWTexture2D<float4> i
     float4 new_color = a0 * c0 + (1 - a0) * background;
     image[coords] = new_color;
 
+}
+void set_pixel_transformed(float2 coords, float4 color_rgba, RWTexture2D<float4> image, float3x3 world_to_obj) {
+    coords = get_transformed_coords(coords, world_to_obj);
+    set_pixel_with_alpha(uint2((uint)coords.x, (uint)coords.y), color_rgba, image);
+
+}
+
+float2 get_transformed_coords(float2 coords, float3x3 world_to_obj) {
+    float scale_x = world_to_obj[0][0];
+    float scale_y = world_to_obj[1][1];
+    float shear_x = world_to_obj[0][1];
+    float shear_y = world_to_obj[1][0];
+
+    float x_prime = scale_x * coords.x +
+                    shear_x * coords.y;
+    float y_prime = shear_y * coords.x +
+                    scale_y * coords.y;
+    return float2(x_prime, y_prime);
 }
