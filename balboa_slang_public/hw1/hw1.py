@@ -185,7 +185,7 @@ def hw1_8(args):
         app = window.App(slang_device, img)
         def update(t, bindings):
             # The following is slightly inefficient: 
-            # we reupload the scene regardless of whether things have changed or not.
+            # we reupload the scene regardless of whether things haslangve changed or not.
             # Can you think of a better way to optimize this?
             bindings = hw1_scene.upload_scene(scene,
                                               compute_shader.module,

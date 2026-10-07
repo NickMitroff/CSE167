@@ -193,16 +193,57 @@ def compose_transformation(transforms):
         pass
         # TODO: your code here
 
+        S = np.eye(2,dtype=np.float32) #scale
+        H = np.eye(2,dtype=np.float32) #shear
+        R = np.eye(2,dtype=np.float32) #rotation
+        T = np.eye(3,dtype=np.float32) #rotation
         #Set Up the Matrix of the given transform.
-        print('scale' in transform)
-        T = np.eye(3,dtype=np.float32)
         if 'scale' in transform:
-            print(transform['scale'][0])
-            F[0,0] *= transform['scale'][0]
-            F[1,1] *= transform['scale'][1]
-        elif 'translate' in transform:
+            print(f"scale: {transform['scale'][0]}, {transform["scale"][1]}")
+            S[0,0] = transform['scale'][0]
+            S[1,1] = transform['scale'][1]
+        if 'translate' in transform:
             F[0, 2] = transform['translate'][0]
             F[1, 2] = transform['translate'][1]
+        if 'shear_x' in transform:
+            print(f"shear_x: {transform['shear_x'][0]}")
+            H[0, 1] = transform['shear_x'][0] 
+        if 'shear_y' in transform:
+            print(f"shear_y: {transform['shear_y'][0]}")
+            H[1, 0] = transform['shear_y'][0]
+        if 'rotate' in transform:
+            angle = math.radians(transform['rotate'][0])
+            print(f"angle (degrees): {transform['rotate'][0]}")
+
+            R[0,0] = math.cos(angle) 
+            R[0,1] = -math.sin(angle)
+            R[1,0] = math.sin(angle)
+            R[1,1] = math.cos(angle)
+
+        # each iteration of this loop only includes one of the transforms
+        # so we need to apply just the transforms that were set to F
+        # because S H R and T were initialized as the identity matrix
+        # they wont do anything unless we've set their values in this loop iteration
+        A = (S @ H) @ R
+        T[0,0] = A[0,0]
+        T[0,1] = A[0,1]
+        T[1,0] = A[1,0]
+        T[1,1] = A[1,1]
+
+        # LLM use disclosure:
+        # I consulted OpenAI Codex for a bit of help with these matrices
+        # when I was having trouble applying the shear & rotate transformations
+        # and knew that the issue was somewhere in this function
+        # The problem ended up being this line of code, which previously said
+        # "F = F @ T"
+        # According to Codex, this was the wrong order to multiply these matrices,
+        # as it resulted in the shear/rotate transforms being applied *after* the scale transform
+        # when they should be applied before
+        # The rest of the code apart from this line was hand-written by us <3
+        # - Nick
+        F = T @ F
+        
+        
         # elif transform == "shear_x":
         #     T[1,2] = transform[0]
         # elif transform == "shear_y":

@@ -13,83 +13,94 @@ void set_pixel_with_alpha(uint2 tid, float4 color_rgba, RWTexture2D<float4> imag
     image[coords] = new_color;
 }
 
-bool draw_circle(uint2 tid,
+
+
+bool draw_circle(uint2 tid, float2 scaled_coords,
                     Shape shape, Circle circle, 
-                    RWTexture2D<float4> image, uint screen_height) {
-    if (circle.center.x != 0 || circle.center.y != 0) {
-        shape.world_to_obj[0][2] = circle.center.x;
-        shape.world_to_obj[1][2] = screen_height - circle.center.y;
+                    RWTexture2D<float4> image) {
+
+    bool set_pixel = false;
+
+    if (shape.use_fill) {
+        if (circle_should_draw_fill(scaled_coords, shape, circle, image)) {
+            set_pixel_with_alpha(tid, shape.fill_rgba, image);
+            set_pixel = true;
+        };
     }
-
-
-
 
     if (shape.use_stroke) {
-        if (draw_circle_stroke(tid,
-            circle.center, circle.radius, shape.stroke_width, shape.stroke_rgba, image)) return true;
+        if (circle_should_draw_stroke(scaled_coords, shape, circle, image)) {
+                set_pixel_with_alpha(tid, shape.stroke_rgba, image);
+                set_pixel = true;
+            }
     }
-    if (shape.use_fill) {
-        if (draw_circle_fill(tid, circle.radius, shape.fill_rgba, image, shape.world_to_obj)) return true;
-    }
-    return false;
+
+    return set_pixel;
 }
 
-bool draw_circle_fill(uint2 tid,
-    float radius, float4 fill_rgba, RWTexture2D<float4> image, float3x3 world_to_obj) {
+bool circle_should_draw_fill(float2 scaled_coords,
+                    Shape shape, Circle circle, 
+                    RWTexture2D<float4> image) {
 
-    float2 center = float2(world_to_obj[0][2], world_to_obj[1][2]);
-    float2 point_in_object_space = get_transformed_coords(tid, world_to_obj);
+    // float2 point_in_object_space = get_transformed_coords(tid, world_to_obj);
 
-    if (length(center - point_in_object_space) <= radius) {
-        set_pixel_with_alpha(uint2((uint)tid.x, (uint)tid.y), fill_rgba, image);
+    if (length(circle.center - scaled_coords) <= circle.radius) {
         return true;
     }
     return false;
 }
 
-bool draw_circle_stroke(uint2 tid,
-    float2 center, float radius, float stroke_width, 
-    float4 stroke_rgba, RWTexture2D<float4> image) {
+bool circle_should_draw_stroke(float2 scaled_coords,
+                    Shape shape, Circle circle, 
+                    RWTexture2D<float4> image) {
 
-    float2 screen_center = float2(center.x, center.y);
-    float2 offset_vec = tid - screen_center;
-    float distance = length(offset_vec);
-    float half_width = stroke_width / 2;
+    float distance = length(circle.center - scaled_coords);
+    float half_width = shape.stroke_width / 2;
 
-    if (distance <= radius + half_width && distance >= radius - half_width) {
-        set_pixel_with_alpha(uint2((uint)tid.x, (uint)tid.y), stroke_rgba, image);
+    if (distance <= circle.radius + half_width && distance >= circle.radius - half_width) {
         return true;
     }
     return false;
 }
 
 //Drawing Polylines
-bool draw_polyline(uint2 tid,
+bool draw_polyline(uint2 tid, float2 scaled_coords,
                     Shape shape, Polyline polyline, 
                     StructuredBuffer<float2> points,
                     RWTexture2D<float4> image){
     int num_polylines, stride;
     points.GetDimensions(num_polylines, stride); 
-    if (draw_polyline_fill_stroke(tid, points, 
-            polyline, shape.use_fill, shape.fill_rgba, 
-            shape.use_stroke, shape.stroke_rgba, shape.stroke_width, 
-            image)) return true; 
-    return false; 
+    bool2 should_draw = polyline_should_draw(scaled_coords, points, shape, polyline, image);
+    bool set_pixel = false;
+
+    // fill
+    if (should_draw.x) {
+        set_pixel_with_alpha(tid, shape.fill_rgba, image);
+        set_pixel = true;
+    }
+
+    // stroke
+    if (should_draw.y) {
+        set_pixel_with_alpha(tid, shape.stroke_rgba, image);
+        set_pixel = true;
+    }
+    return set_pixel;
 }
 
-bool draw_polyline_fill_stroke(uint2 tid,
-                        StructuredBuffer<float2> points, 
+
+// returns a bool2
+// bool2.x = should draw fill
+// bool2.y = should draw stroke
+bool2 polyline_should_draw(float2 scaled_coords,
+                        StructuredBuffer<float2> points, Shape shape,
                         Polyline pl, 
-                        bool use_fill_color, float4 fill_color, 
-                        bool use_stroke_color, float4 stroke_color,
-                        float stroke_width, 
                         RWTexture2D<float4> image){
     bool apply_stroke = false; 
     bool apply_fill = false;
     bool is_closed = pl.closed;
     int num_polyline = pl.pts_end - pl.pts_begin;
     int iterations = is_closed ? num_polyline : num_polyline - 1; 
-    uint2 q = tid;
+    float2 q = scaled_coords;
         int count = 0; 
         for(uint i = pl.pts_begin; i < pl.pts_begin + iterations; i++){
             float2 p0; 
@@ -102,7 +113,7 @@ bool draw_polyline_fill_stroke(uint2 tid,
             p1 = points[i == pl.pts_begin + num_polyline - 1 ? pl.pts_begin : i + 1];
 
             line_up = p1.y > p0.y;
-            if (use_fill_color) {
+            if (shape.use_fill) {
                 if(ray_intersects_polyline(q, p0, p1, line_up)){
                     if (line_up) count++;
                         else count--;
@@ -112,21 +123,13 @@ bool draw_polyline_fill_stroke(uint2 tid,
             
 
             //Calculate Magnitude
-            if (use_stroke_color) {
-                if (point_is_in_stroke_range(q, p0, p1, stroke_width)) apply_stroke = true;
+            if (shape.use_stroke) {
+                if (point_is_in_stroke_range(q, p0, p1, shape.stroke_width)) apply_stroke = true;
             }
 
         }
     
-    if(apply_fill){
-        set_pixel_with_alpha(tid, fill_color, image);
-    }
-
-    if(apply_stroke){
-        set_pixel_with_alpha(tid, stroke_color, image);
-    }
-
-    return apply_fill || apply_stroke; 
+    return bool2(apply_fill, apply_stroke);
 }
 
 bool ray_intersects_polyline(float2 q, float2 p0, float2 p1, bool line_up) {
@@ -168,8 +171,8 @@ float2 get_transformed_coords(uint2 tid, float3x3 world_to_obj) {
     float translate_y = world_to_obj[1][2];
 
     float x_prime = scale_x * tid.x +
-                    shear_x * tid.y;
+                    shear_x * tid.y + translate_x;
     float y_prime = scale_y * tid.y +
-                    shear_y * tid.x;
+                    shear_y * tid.x + translate_y;
     return float2(x_prime, y_prime);
 }
