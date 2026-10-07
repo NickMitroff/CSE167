@@ -128,6 +128,7 @@ bool2 polyline_should_draw(float2 scaled_coords,
             }
 
         }
+
     
     return bool2(apply_fill, apply_stroke);
 }
