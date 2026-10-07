@@ -203,8 +203,8 @@ def compose_transformation(transforms):
             S[0,0] = transform['scale'][0]
             S[1,1] = transform['scale'][1]
         if 'translate' in transform:
-            F[0, 2] = transform['translate'][0]
-            F[1, 2] = transform['translate'][1]
+            T[0, 2] = transform['translate'][0]
+            T[1, 2] = transform['translate'][1]
         if 'shear_x' in transform:
             print(f"shear_x: {transform['shear_x'][0]}")
             H[0, 1] = transform['shear_x'][0] 
