@@ -20,20 +20,20 @@ void compute_main(uint2 tid: SV_DispatchThreadID,
     {
         return;
     }
-
     uint2 coords = uint2(tid.x, height - tid.y);
-    image[coords] = float4(background, 1.0);
+    image[tid] = float4(background, 1);
 
     for (uint i = 0; i < num_shapes; i++) {
         // for alpha test, draw the shapes BACK to FRONT
         Shape shape = shapes[num_shapes - i - 1];
+        
         if (shape.type == ShapeType.Circle) {
             Circle circle = circles[shape.index];
-            draw_circle(coords, height, shape, circle, image);
+            draw_circle(tid, coords, shape, circle, image);
         }
         if(shape.type == ShapeType.Polyline){
             Polyline polyline = polylines[shape.index];
-            draw_polyline(tid, coords,shape, polyline, points, image);
+            draw_polyline(tid, coords, shape, polyline, points, image);
         }
     }
 }

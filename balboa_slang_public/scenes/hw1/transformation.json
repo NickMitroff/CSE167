@@ -1,4 +1,5 @@
-{
+ 
+ {
     "resolution": [640, 360],
     "background": [
         0.3, 0.3, 0.3
@@ -49,6 +50,8 @@
         {
             "type": "circle",
             "fill_rgba": [0.1, 0.3, 0.9, 1.0],
+
+
             "transform": [
                 {"scale": [200, 100]},
                 {"rotate": [45]},
