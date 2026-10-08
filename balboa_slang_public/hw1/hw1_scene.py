@@ -246,11 +246,34 @@ def compose_transformation(transforms):
 
 def interpolate_transformation(transform_keyframes, t):
     # TODO: your code here
-    t0,t1
-    
+    transforms = []
+    #Find t0 ans t1
+    k0 = None
+    k1 = None
+    for keyframe in transform_keyframes:
+        if(t == keyframe["time"]):
+            return
+        if(k0 == None):
+            k0 = keyframe
+            continue
+        k1 = keyframe
+        if(t > k0["time"] & t < k1["time"]):
+            break
+        k0 = k1
 
-    # Should never happen?
-    assert False
+    w = (t-k0["time"])/(k1["time"]-k0["time"])
+    for transform in transform_keyframes["transform"]:
+        if 'scale' in transform:
+            transforms.append({"scale": [interpolate(w,k0["transform"][0], k1["transform"][0]), interpolate(w,k0["transform"][1], k1["transform"][1])]})
+        if 'translate' in transform:
+            transforms.append({"translate": [interpolate(w,k0["transform"][0], k1["transform"][0]), interpolate(w,k0["transform"][1], k1["transform"][1])]})
+        if 'shear_x' in transform:
+            transforms.append({"shear_x": [interpolate(w,k0["transform"][0], k1["transform"][0])]})
+        if 'shear_y' in transform:
+            transforms.append({"shear_x": [interpolate(w,k0["transform"][0], k1["transform"][0])]})
+        if 'rotate' in transform:
+            transforms.append({"rotate": [interpolate(w,k0["transform"][0], k1["transform"][0])]})
+    return transforms
 
 def upload_scene(scene, module, slang_device, t=0.0):
     # Keyframe parameters are interpolated on the CPU;
@@ -289,3 +312,6 @@ def upload_scene(scene, module, slang_device, t=0.0):
         'quadratic_beziers': buffer.create_structured_buffer(slang_device, module.QuadraticBezier, scene.quadratic_beziers),
         'points': buffer.structured_buffer_from_numpy(slang_device, scene.points),
     }
+
+def interpolate(w, x0, x1):
+    return (1 - w)*x0 + w*x1
