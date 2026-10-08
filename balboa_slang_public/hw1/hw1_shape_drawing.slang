@@ -106,11 +106,12 @@ bool2 polyline_should_draw(float2 scaled_coords,
             float2 p0; 
             float2 p1;
             bool line_up; 
-
-            p0 = points[i];
+            int p0_index = i;
+            int p1_index = i == pl.pts_begin + num_polyline - 1 ? pl.pts_begin : i + 1;
+            p0 = points[p0_index];
             // if the polyline is NOT closed, then don't iterate from last point back to start
             // which means using num_polyline-1 instead of iterations
-            p1 = points[i == pl.pts_begin + num_polyline - 1 ? pl.pts_begin : i + 1];
+            p1 = points[p1_index];
 
             line_up = p1.y > p0.y;
             if (shape.use_fill) {
@@ -124,7 +125,9 @@ bool2 polyline_should_draw(float2 scaled_coords,
 
             //Calculate Magnitude
             if (shape.use_stroke) {
-                if (point_is_in_stroke_range(q, p0, p1, shape.stroke_width)) apply_stroke = true;
+                bool p0_is_round = is_closed || p0_index != pl.pts_begin;
+                bool p1_is_round = is_closed || p1_index != pl.pts_end - 1;
+                if (point_is_in_stroke_range(q, p0, p1, shape.stroke_width, p0_is_round, p1_is_round)) apply_stroke = true;
             }
 
         }
@@ -146,10 +149,12 @@ bool ray_intersects_polyline(float2 q, float2 p0, float2 p1, bool line_up) {
     return true;
 }
 
-bool point_is_in_stroke_range(float2 q, float2 p0, float2 p1, float stroke_width) {
+bool point_is_in_stroke_range(float2 q, float2 p0, float2 p1, float stroke_width, bool p0_is_round, bool p1_is_round) {
     float pntMagnitude = length(p1 - p0);
     if (pntMagnitude == 0.0) return false;
     float l = dot((p1 - p0), (q - p0)) / pntMagnitude;
+    if (p0_is_round && length(p0 - q) < stroke_width/2) return true;
+    if (p1_is_round && length(p1 - q) < stroke_width/2) return true;
     if (l <= 0 || l >= pntMagnitude) return false;
     float2 q2 = p0 + l * ((p1 - p0) / pntMagnitude);
     float compare = length(q - q2);
