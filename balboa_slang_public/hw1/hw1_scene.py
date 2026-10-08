@@ -264,15 +264,17 @@ def interpolate_transformation(transform_keyframes, t):
     w = (t-k0["time"])/(k1["time"]-k0["time"])
     for transform in transform_keyframes["transform"]:
         if 'scale' in transform:
-            transforms.append({"scale": [interpolate(w,k0["transform"][0], k1["transform"][0]), interpolate(w,k0["transform"][1], k1["transform"][1])]})
+            transforms.append({'scale': [interpolate(w,k0["transform"]['scale'][0], k1["transform"]['scale'][0]), 
+                                         interpolate(w,k0["transform"]['scale'][1], k1["transform"]['scale'][1])]})
         if 'translate' in transform:
-            transforms.append({"translate": [interpolate(w,k0["transform"][0], k1["transform"][0]), interpolate(w,k0["transform"][1], k1["transform"][1])]})
+            transforms.append({'translate': [interpolate(w,k0["transform"]['translate'][0], k1["transform"]['translate'][0]), 
+                                             interpolate(w,k0["transform"]['translate'][1], k1["transform"]['translate'][1])]})
         if 'shear_x' in transform:
-            transforms.append({"shear_x": [interpolate(w,k0["transform"][0], k1["transform"][0])]})
+            transforms.append({'shear_x': [interpolate(w,k0["transform"]['shear_x'][0], k1["transform"]['shear_x'][0])]})
         if 'shear_y' in transform:
-            transforms.append({"shear_x": [interpolate(w,k0["transform"][0], k1["transform"][0])]})
+            transforms.append({'shear_x': [interpolate(w,k0["transform"]['shear_x'][0], k1["transform"]['shear_x'][0])]})
         if 'rotate' in transform:
-            transforms.append({"rotate": [interpolate(w,k0["transform"][0], k1["transform"][0])]})
+            transforms.append({'rotate': [interpolate(w,k0["transform"]['rotate'][0], k1["transform"]['rotate'][0])]})
     return transforms
 
 def upload_scene(scene, module, slang_device, t=0.0):
