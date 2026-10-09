@@ -13,7 +13,10 @@ void set_pixel_with_alpha(uint2 tid, float4 color_rgba, RWTexture2D<float4> imag
     image[coords] = new_color;
 }
 
-
+void test_draw_circle(uint2 tid, float2 coords, float2 center, float radius, float4 fill_rgba, RWTexture2D<float4> image) {
+    draw_circle(tid, coords, Shape(ShapeType.Circle, -1, true, fill_rgba, false, float4(0), 0, float3x3(1,0,0,0,1,0,0,0,1)),
+        Circle(center, radius), image);
+}
 
 bool draw_circle(uint2 tid, float2 scaled_coords,
                     Shape shape, Circle circle, 
@@ -141,11 +144,13 @@ bool ray_intersects_polyline(float2 q, float2 p0, float2 p1, bool line_up) {
     if (p1.y != p0.y) t = (q.y - p0.y) / (p1.y - p0.y);
     else return false; // if a line lies completely flat, we ignore it
     if (t < 0 || t > 1) return false; // if this polyline is entirely above/below point q
-    // edge case where the test point is on a vertex (where two polylines intersect)
-    if (t == 0 && line_up) return false;
-    if (t == 1 && !line_up) return false;
     float s = p0.x + t * (p1.x - p0.x) - q.x;
     if (s < 0) return false; // if the point to test is left of the point q
+
+    // edge case where the test point is on a vertex (where two polylines intersect)
+    if (q.y == p0.y && line_up) return false;
+    if (q.y == p1.y && !line_up) return false;
+
     return true;
 }
 
