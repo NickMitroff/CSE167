@@ -20,6 +20,6 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
     // since our helper methods require a Shape struct
     Shape shape = Shape(ShapeType.Circle, 0, true, float4(color, 1.0), false, float4(0), 0, float3x3(1,0,0,0,1,0,0,0,1));
     Circle circle = Circle(center, radius);
-    draw_circle(tid, tid_fixed, shape, circle, image);
+    image[tid] = draw_circle(tid, tid_fixed, shape, circle, image);
 }
 

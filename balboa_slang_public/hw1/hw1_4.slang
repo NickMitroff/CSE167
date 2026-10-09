@@ -20,6 +20,7 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
     }
     
     uint2 tid_fixed = uint2(tid.x, height - tid.y);
+    float2 tid_float = float2(tid.x, height - tid.y); 
     image[tid] = float4(background, 1.0);
 
     // TODO: your code here
@@ -28,14 +29,16 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
         // for alpha test, draw the shapes BACK to FRONT
         Shape shape = shapes[num_shapes - i - 1];
         float2 coords =  get_transformed_coords(tid_fixed, shape.world_to_obj);
-        
+        float4 color = image[tid]; 
         if (shape.type == ShapeType.Circle) {
             Circle circle = circles[shape.index];
-            draw_circle(tid, coords, shape, circle, image);
+            color = draw_circle(tid, coords, shape, circle, image);
         }
         if(shape.type == ShapeType.Polyline){
             Polyline polyline = polylines[shape.index];
-            draw_polyline(tid, coords, shape, polyline, points, image);
+            color = draw_polyline(tid, coords, shape, polyline, points, image);
         }
+
+        image[tid] = color; 
     }
 }

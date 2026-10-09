@@ -2,7 +2,7 @@ import hw1_common;
 // Our code!
 
 
-void set_pixel_with_alpha(uint2 tid, float4 color_rgba, RWTexture2D<float4> image) {
+float4 set_pixel_with_alpha(uint2 tid, float4 color_rgba, RWTexture2D<float4> image) {
     uint2 coords = int2(tid.x, tid.y);
 
     // apply alpha compositing
@@ -10,28 +10,26 @@ void set_pixel_with_alpha(uint2 tid, float4 color_rgba, RWTexture2D<float4> imag
     float4 c0 = float4(color_rgba.x, color_rgba.y, color_rgba.z, 1.0);
     float a0 = color_rgba.w;
     float4 new_color = a0 * c0 + (1 - a0) * background;
-    image[coords] = new_color;
+    return new_color;
 }
 
 
 
-bool draw_circle(uint2 tid, float2 scaled_coords,
+float4 draw_circle(uint2 tid, float2 scaled_coords,
                     Shape shape, Circle circle, 
                     RWTexture2D<float4> image) {
 
-    bool set_pixel = false;
+    float4 set_pixel = image[tid];
 
     if (shape.use_fill) {
         if (circle_should_draw_fill(scaled_coords, shape, circle, image)) {
-            set_pixel_with_alpha(tid, shape.fill_rgba, image);
-            set_pixel = true;
+            set_pixel = set_pixel_with_alpha(tid, shape.fill_rgba, image);
         };
     }
 
     if (shape.use_stroke) {
         if (circle_should_draw_stroke(scaled_coords, shape, circle, image)) {
-                set_pixel_with_alpha(tid, shape.stroke_rgba, image);
-                set_pixel = true;
+                set_pixel = set_pixel_with_alpha(tid, shape.stroke_rgba, image);
             }
     }
 
@@ -64,29 +62,26 @@ bool circle_should_draw_stroke(float2 scaled_coords,
 }
 
 //Drawing Polylines
-bool draw_polyline(uint2 tid, float2 scaled_coords,
+float4 draw_polyline(uint2 tid, float2 scaled_coords,
                     Shape shape, Polyline polyline, 
                     StructuredBuffer<float2> points,
                     RWTexture2D<float4> image){
     int num_polylines, stride;
     points.GetDimensions(num_polylines, stride); 
     bool2 should_draw = polyline_should_draw(scaled_coords, points, shape, polyline, image);
-    bool set_pixel = false;
+    float4 set_pixel = image[tid];
 
     // fill
     if (should_draw.x) {
-        set_pixel_with_alpha(tid, shape.fill_rgba, image);
-        set_pixel = true;
+        set_pixel = set_pixel_with_alpha(tid, shape.fill_rgba, image);
     }
 
     // stroke
     if (should_draw.y) {
-        set_pixel_with_alpha(tid, shape.stroke_rgba, image);
-        set_pixel = true;
+        set_pixel = set_pixel_with_alpha(tid, shape.stroke_rgba, image);
     }
     return set_pixel;
 }
-
 
 // returns a bool2
 // bool2.x = should draw fill
@@ -164,7 +159,7 @@ bool point_is_in_stroke_range(float2 q, float2 p0, float2 p1, float stroke_width
 
 
 
-float2 get_transformed_coords(uint2 tid, float3x3 world_to_obj) {
+float2 get_transformed_coords(float2 tid, float3x3 world_to_obj) {
 
     
     float scale_x = world_to_obj[0][0];

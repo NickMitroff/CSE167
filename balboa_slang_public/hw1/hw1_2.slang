@@ -29,5 +29,5 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
     Shape shape = Shape(ShapeType.Polyline, 0, use_fill_color, float4(fill_color, 1.0), use_stroke_color, float4(stroke_color, 1.0), stroke_width, 
         float3x3(1,0,0,0,1,0,0,0,1));
 
-    draw_polyline(tid, tid_fixed, shape, pl, polyline, image);
+    image[tid] = draw_polyline(tid, tid_fixed, shape, pl, polyline, image);
 }
