@@ -188,7 +188,7 @@ def compose_transformation(transforms):
     """
 
     F = np.eye(3, dtype=np.float32)
-    print(transforms)
+    #print(transforms)
     for transform in transforms:
         pass
         # TODO: your code here
@@ -199,21 +199,21 @@ def compose_transformation(transforms):
         T = np.eye(3,dtype=np.float32) #rotation
         #Set Up the Matrix of the given transform.
         if 'scale' in transform:
-            print(f"scale: {transform['scale'][0]}, {transform["scale"][1]}")
+            #print(f"scale: {transform['scale'][0]}, {transform["scale"][1]}")
             S[0,0] = transform['scale'][0]
             S[1,1] = transform['scale'][1]
         if 'translate' in transform:
             T[0, 2] = transform['translate'][0]
             T[1, 2] = transform['translate'][1]
         if 'shear_x' in transform:
-            print(f"shear_x: {transform['shear_x'][0]}")
+            #print(f"shear_x: {transform['shear_x'][0]}")
             H[0, 1] = transform['shear_x'][0] 
         if 'shear_y' in transform:
-            print(f"shear_y: {transform['shear_y'][0]}")
+            #print(f"shear_y: {transform['shear_y'][0]}")
             H[1, 0] = transform['shear_y'][0]
         if 'rotate' in transform:
             angle = math.radians(transform['rotate'][0])
-            print(f"angle (degrees): {transform['rotate'][0]}")
+            #print(f"angle (degrees): {transform['rotate'][0]}")
 
             R[0,0] = math.cos(angle) 
             R[0,1] = -math.sin(angle)

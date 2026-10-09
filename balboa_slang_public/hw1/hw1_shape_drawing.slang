@@ -13,6 +13,14 @@ float4 set_pixel_with_alpha(uint2 tid, float4 color_rgba, RWTexture2D<float4> im
     return new_color;
 }
 
+float4 mix_colors(float4 base_color, float4 top_color) {
+    float a0 = top_color.w;
+    float4 c0 = float4(top_color.x, top_color.y, top_color.z, 1.0);
+    
+    float4 new_color = a0 * c0 + (1 - a0) * base_color;
+    return new_color;
+}
+
 void test_draw_circle(uint2 tid, float2 coords, float2 center, float radius, float4 fill_rgba, RWTexture2D<float4> image) {
     draw_circle(tid, coords, Shape(ShapeType.Circle, -1, true, fill_rgba, false, float4(0), 0, float3x3(1,0,0,0,1,0,0,0,1)),
         Circle(center, radius), image);
@@ -81,7 +89,9 @@ float4 draw_polyline(uint2 tid, float2 scaled_coords,
 
     // stroke
     if (should_draw.y) {
-        set_pixel = set_pixel_with_alpha(tid, shape.stroke_rgba, image);
+        // if drawing on top of fill color, then mix the colors
+        if (should_draw.x) set_pixel = mix_colors(set_pixel, shape.stroke_rgba);
+        else set_pixel = set_pixel_with_alpha(tid, shape.stroke_rgba, image);
     }
     return set_pixel;
 }
@@ -125,7 +135,8 @@ bool2 polyline_should_draw(float2 scaled_coords,
             if (shape.use_stroke) {
                 bool p0_is_round = is_closed || p0_index != pl.pts_begin;
                 bool p1_is_round = is_closed || p1_index != pl.pts_end - 1;
-                if (point_is_in_stroke_range(q, p0, p1, shape.stroke_width, p0_is_round, p1_is_round)) apply_stroke = true;
+                if (point_is_in_stroke_range(q, p0, p1, 
+                    shape.stroke_width, p0_is_round, p1_is_round)) apply_stroke = true;
             }
 
         }

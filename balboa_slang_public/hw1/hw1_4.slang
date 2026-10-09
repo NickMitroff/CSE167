@@ -27,7 +27,8 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
     for (uint i = 0; i < num_shapes; i++) {
         // for alpha test, draw the shapes BACK to FRONT
         Shape shape = shapes[num_shapes - i - 1];
-        float2 coords =  get_transformed_coords(tid_fixed, shape.world_to_obj);
+        float2 coords =  get_transformed_coords(tid_fixed + float2(0.5, -0.5), shape.world_to_obj);
+        coords = float2(coords.x, coords.y);
         float4 color = image[tid]; 
         if (shape.type == ShapeType.Circle) {
             Circle circle = circles[shape.index];
