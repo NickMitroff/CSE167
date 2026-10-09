@@ -94,6 +94,18 @@ bool draw_bezier_stroke(uint2 tid, float2 coords,
         float2 b = points[indices.y];
         float2 c = points[indices.z];
 
+        // apply round joins using the same method we used for polylines
+        bool p0_is_round = bezier.closed || indices.x > itr_start;
+        bool p1_is_round = bezier.closed || indices.z < itr_end - 1;
+        if (p0_is_round && length(a - d) < shape.stroke_width/2) {
+            set_pixel_with_alpha(tid, shape.stroke_rgba, image);
+            return true;
+        }
+        if (p1_is_round && length(c - d) < shape.stroke_width/2) {
+            set_pixel_with_alpha(tid, shape.stroke_rgba, image);
+            return true;
+        }
+
 
         
 
