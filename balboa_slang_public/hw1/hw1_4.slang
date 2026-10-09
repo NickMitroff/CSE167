@@ -20,7 +20,6 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
     }
     
     uint2 tid_fixed = uint2(tid.x, height - tid.y);
-    float2 tid_float = float2(tid.x, height - tid.y); 
     image[tid] = float4(background, 1.0);
 
     // TODO: your code here
