@@ -31,6 +31,7 @@ bool draw_bezier_fill(uint2 tid, float2 coords,
     float2 q = coords;
     int count = 0;
     bool line_up = false;
+    bool debug_draw_itr = false;
     bool debug_draw = false;
     for (int i = itr_start; i <= itr_end - 1; i += 2) {
         int3 indices;
@@ -43,20 +44,18 @@ bool draw_bezier_fill(uint2 tid, float2 coords,
         float2 p0 = points[indices.x];
         float2 p1 = points[indices.y];
         float2 p2 = points[indices.z];
-        if (ray_intersects_bezier(q, p0, p1, p2, line_up, debug_draw)) {
-            if (line_up) count++;
-            else count--;
-        }
+        int2 intersections = ray_intersects_bezier(q, p0, p1, p2, debug_draw_itr);
+        if (debug_draw_itr) debug_draw = true;
+        count += intersections.x;
+        count += intersections.y;
 
-        
     }
-
     
     if (debug_draw) {
         set_pixel_with_alpha(tid, float4(0, 1, 0,1), image);
 
     }
-    if (count != 0) {
+    else if (count != 0) {
         // shape.fill_rgba.w = 0.5 + count * 0.1;
         set_pixel_with_alpha(tid, shape.fill_rgba, image);
         return true;
@@ -65,6 +64,63 @@ bool draw_bezier_fill(uint2 tid, float2 coords,
 
 }
 
+
+
+
+// intersection test
+int2 ray_intersects_bezier(float2 q, float2 p0, float2 p1, float2 p2, out bool debug_draw) {
+    float2 solutions;
+    bool root_x_valid = false;
+    bool root_y_valid = false;
+    debug_draw = false;
+    int2 results = int2(0,0);
+    bool line_up;
+    
+    float t;
+
+    // want to solve: q.y = (1-t)^2 * p0.y + 2(1 - t) * t * p1.y + t^2 * p2l.y
+    // which is equivalent to 
+    // 0 = 
+    // t^2(p0.y - 2 * p1.y + p2.y) 
+    // + t(-2 * p0.y + 2 * p1.y)
+    // + (p0.y - q.y)
+    
+    // use the built-in solve_quadratic method to find candidate values for t
+    bool2 roots_valid = check_roots(p0, p1, p2, q, solutions);
+    float epsilon = 0.000001;
+    if (roots_valid.x && roots_valid.y) {
+        t = solutions.y;
+        float derivative = -2 * p0.y * (1 - t)
+            - 4 * p1.y * t + 2 * p1.y
+            + 2 * t * p2.y;
+        
+        line_up = derivative > 0;
+        if (t <= epsilon && line_up) results.y = 0;
+        else if (t >= 1 - epsilon && !line_up) results.y = 0;
+        else results.y = line_up ? 1 : -1;
+        t = solutions.x;
+    }
+    else if (roots_valid.x) t = solutions.x;
+    else if (roots_valid.y) t = solutions.y;
+    else return results;
+
+    // take the derivative to see if the line is going up at time t
+    float derivative = -2 * p0.y * (1 - t)
+        - 4 * p1.y * t + 2 * p1.y
+        + 2 * t * p2.y;
+
+    line_up = derivative > 0;
+    
+
+    if (t <= epsilon && line_up) results.x = 0;
+    else if (t >= 1 - epsilon && !line_up) results.x = 0;
+    else results.x = line_up ? 1 : -1;
+
+   
+
+
+    return results;
+}
 
 // stroke color
 bool draw_bezier_stroke(uint2 tid, float2 coords, 
@@ -171,15 +227,9 @@ bool draw_bezier_stroke(uint2 tid, float2 coords,
     return false;
 }
 
-// intersection test
-bool ray_intersects_bezier(float2 q, float2 p0, float2 p1, float2 p2, out bool line_up, out bool debug_draw) {
-    float2 solutions;
-    bool root_x_valid = false;
-    bool root_y_valid = false;
-    debug_draw = false;
-    
+bool2 check_roots(float2 p0, float2 p1, float2 p2, float2 q, out float2 solutions) {
+    bool2 roots_valid = bool2(false, false);
     float t;
-    line_up = false;
 
     // want to solve: q.y = (1-t)^2 * p0.y + 2(1 - t) * t * p1.y + t^2 * p2l.y
     // which is equivalent to 
@@ -189,17 +239,19 @@ bool ray_intersects_bezier(float2 q, float2 p0, float2 p1, float2 p2, out bool l
     // + (p0.y - q.y)
     
     // use the built-in solve_quadratic method to find candidate values for t
+    // q.y += 0.0001;
     if (!solve_quadratic(p0.y - 2 * p1.y + p2.y, 
         -2 * p0.y + 2 * p1.y, 
         p0.y - q.y, 
-        solutions)) return false;
+        solutions)) return roots_valid;
+
     if (solutions.x >= 0 && solutions.x <= 1) {
         t = solutions.x;
         float sx = (1 - t) * (1 - t) * p0.x
             + 2 * (1 - t) * t * p1.x
             + t * t * p2.x
             - q.x;
-        if (sx >= 0) root_x_valid = true;
+        if (sx >= 0) roots_valid.x = true;
     }
     if (solutions.y >= 0 && solutions.y <= 1) { 
         t = solutions.y;
@@ -207,41 +259,9 @@ bool ray_intersects_bezier(float2 q, float2 p0, float2 p1, float2 p2, out bool l
             + 2 * (1 - t) * t * p1.x
             + t * t * p2.x
             - q.x;
-        if (sy >= 0) root_y_valid = true; 
+        if (sy >= 0) roots_valid.y = true; 
     }
+    return roots_valid;
     
-    
-    if (root_x_valid && root_y_valid) {
-        // debug_draw = true;
-        return false;
-    }
-    else if (root_x_valid) t = solutions.x;
-    else if (root_y_valid) t = solutions.y;
-    else return false;
-
-    // take the derivative to see if the line is going up at time t
-    float derivative = -2 * p0.y * (1 - t)
-        - 4 * p1.y * t + 2 * p1.y
-        + 2 * t * p2.y;
-
-    line_up = derivative > 0;
-    
-    // vertex edge case checking (still have no idea how to correctly do this)
-    bool isStartVertex = (t == 0);
-    bool isEndVertex = (t == 1);
-    // if (isStartVertex && line_up) return false;
-    // if (isEndVertex && !line_up) return false;
-
-    // now that we have t, we can find the x-coordinate of the point
-    // and use it to find s
-    float s = (1 - t) * (1 - t) * p0.x
-        + 2 * (1 - t) * t * p1.x
-        + t * t * p2.x
-        - q.x;
-
-    // if the intersection point is to the left of point q
-    // then return false
-    if (s < 0) return false; 
-
-    return true;
 }
+
