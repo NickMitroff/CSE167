@@ -98,7 +98,7 @@ int2 ray_intersects_bezier(float2 q, float2 p0, float2 p1, float2 p2, out bool d
         line_up = derivative > 0;
         if (t < epsilon && line_up) results.y = 0;
         else if (t > 1 - epsilon && !line_up) results.y = 0;
-        else results.y = line_up ? 1 : -1;
+        else if (derivative > epsilon || derivative < -epsilon) results.y = line_up ? 1 : -1;
         t = solutions.x;
     }
     else if (roots_valid.x) t = solutions.x;
@@ -115,7 +115,7 @@ int2 ray_intersects_bezier(float2 q, float2 p0, float2 p1, float2 p2, out bool d
 
     if (t <= epsilon && line_up) results.x = 0;
     else if (t >= 1 - epsilon && !line_up) results.x = 0;
-    else results.x = line_up ? 1 : -1;
+    else if (derivative > epsilon || derivative < -epsilon) results.x = line_up ? 1 : -1;
 
    
 
