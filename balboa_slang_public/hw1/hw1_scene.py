@@ -188,7 +188,7 @@ def compose_transformation(transforms):
     """
 
     F = np.eye(3, dtype=np.float32)
-
+    print(transforms)
     for transform in transforms:
         pass
         # TODO: your code here
@@ -250,31 +250,30 @@ def interpolate_transformation(transform_keyframes, t):
     #Find t0 ans t1
     k0 = None
     k1 = None
-    for keyframe in transform_keyframes:
-        if(t == keyframe["time"]):
-            return
-        if(k0 == None):
-            k0 = keyframe
-            continue
-        k1 = keyframe
-        if(t > k0["time"] & t < k1["time"]):
+    for keyframe in range(len(transform_keyframes) - 1):
+        k0 = transform_keyframes[keyframe]
+        k1 = transform_keyframes[keyframe+1]
+        if(t > k0["time"] and t < k1["time"]):
             break
-        k0 = k1
 
     w = (t-k0["time"])/(k1["time"]-k0["time"])
-    for transform in transform_keyframes["transform"]:
-        if 'scale' in transform:
-            transforms.append({'scale': [interpolate(w,k0["transform"]['scale'][0], k1["transform"]['scale'][0]), 
-                                         interpolate(w,k0["transform"]['scale'][1], k1["transform"]['scale'][1])]})
-        if 'translate' in transform:
-            transforms.append({'translate': [interpolate(w,k0["transform"]['translate'][0], k1["transform"]['translate'][0]), 
-                                             interpolate(w,k0["transform"]['translate'][1], k1["transform"]['translate'][1])]})
-        if 'shear_x' in transform:
-            transforms.append({'shear_x': [interpolate(w,k0["transform"]['shear_x'][0], k1["transform"]['shear_x'][0])]})
-        if 'shear_y' in transform:
-            transforms.append({'shear_x': [interpolate(w,k0["transform"]['shear_x'][0], k1["transform"]['shear_x'][0])]})
-        if 'rotate' in transform:
-            transforms.append({'rotate': [interpolate(w,k0["transform"]['rotate'][0], k1["transform"]['rotate'][0])]})
+    tfArray = k0["transform"]
+    for idx in range(len(tfArray)):
+        if "rotate" in tfArray[idx]:
+            transforms.append({"rotate": [interpolate(w,k0["transform"][idx]["rotate"][0], 
+                                                      k1["transform"][idx]["rotate"][0])]})
+        if "shear_x" in tfArray[idx]:
+            transforms.append({"shear_x": [interpolate(w,k0["transform"][idx]["shear_x"][0], 
+                                                      k1["transform"][idx]["shear_x"][0])]})
+        if "shear_y" in tfArray[idx]:
+            transforms.append({"shear_x": [interpolate(w,k0["transform"][idx]["shear_y"][0], 
+                                                                  k1["transform"][idx]["shear_y"][0])]})
+        if "scale" in tfArray[idx]:
+            transforms.append({"scale": [interpolate(w,k0["transform"][idx]["scale"][0], k1["transform"][idx]["scale"][0]),
+                                         interpolate(w,k0["transform"][idx]["scale"][1], k1["transform"][idx]["scale"][1])]})
+        if "translate" in tfArray[idx]:
+            transforms.append({"translate": [interpolate(w,k0["transform"][idx]["translate"][0], k1["transform"][idx]["translate"][0]),
+                                         interpolate(w,k0["transform"][idx]["translate"][1], k1["transform"][idx]["translate"][1])]})
     return transforms
 
 def upload_scene(scene, module, slang_device, t=0.0):
@@ -294,9 +293,9 @@ def upload_scene(scene, module, slang_device, t=0.0):
         # the shader receives the inverse because hit tests are done in object space
         if 'transform' in shape:
             obj_to_world = compose_transformation(shape['transform'])
-            print(obj_to_world)
+            #print(obj_to_world)
             new_shape['world_to_obj'] = np.linalg.inv(obj_to_world)
-            print(np.linalg.inv(obj_to_world))
+            #print(np.linalg.inv(obj_to_world))
         if 'transform_keyframes' in shape:
             transforms = interpolate_transformation(shape['transform_keyframes'], t)
             obj_to_world = compose_transformation(transforms)
