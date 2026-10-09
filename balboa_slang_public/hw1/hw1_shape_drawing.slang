@@ -143,8 +143,9 @@ bool ray_intersects_polyline(float2 q, float2 p0, float2 p1, bool line_up) {
     if (s < 0) return false; // if the point to test is left of the point q
 
     // edge case where the test point is on a vertex (where two polylines intersect)
-    if (q.y == p0.y && line_up) return false;
-    if (q.y == p1.y && !line_up) return false;
+    float epsilon = 0.000001;
+    if (t < epsilon && line_up) return false;
+    if (t > 1 - epsilon && !line_up) return false;
 
     return true;
 }
