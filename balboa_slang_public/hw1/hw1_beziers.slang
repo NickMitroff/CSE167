@@ -1,18 +1,21 @@
 import hw1_common;
 import hw1_shape_drawing;
 
-bool draw_bezier(uint2 tid, float2 coords, 
+float4 draw_bezier(uint2 tid, float2 coords, 
                     Shape shape, QuadraticBezier bezier, 
                     StructuredBuffer<float2> points,
-                    RWTexture2D<float4> image) {
-    bool set_pixel = false;
-    if (shape.use_fill && bezier.closed) {
-        if (draw_bezier_fill(tid, coords, shape, bezier, points, image)) set_pixel = true;
-    }
-    if (shape.use_stroke) {
-        if (draw_bezier_stroke(tid, coords, shape, bezier, points, image)) set_pixel = true;
+                    RWTexture2D<float4> image) {   
+    float4 set_pixel = image[tid];
+    bool draw_fill = false;
+    if (shape.use_fill && bezier.closed && draw_bezier_fill(tid, coords, shape, bezier, points, image)) {
+        set_pixel = set_pixel_with_alpha(tid, shape.fill_rgba, image);
+        draw_fill = true;
     }
 
+    if (shape.use_stroke && draw_bezier_stroke(tid, coords, shape, bezier, points, image)) {
+        if (draw_fill) set_pixel = mix_colors(set_pixel, shape.stroke_rgba);
+        else set_pixel = set_pixel_with_alpha(tid, shape.stroke_rgba, image);
+    }
     return set_pixel;
 
 }
@@ -52,12 +55,10 @@ bool draw_bezier_fill(uint2 tid, float2 coords,
     }
     
     if (debug_draw) {
-        set_pixel_with_alpha(tid, float4(0, 1, 0,1), image);
-
+        return false;
     }
     else if (count != 0) {
         // shape.fill_rgba.w = 0.5 + count * 0.1;
-        set_pixel_with_alpha(tid, shape.fill_rgba, image);
         return true;
     }
     return false;
@@ -95,8 +96,8 @@ int2 ray_intersects_bezier(float2 q, float2 p0, float2 p1, float2 p2, out bool d
             + 2 * t * p2.y;
         
         line_up = derivative > 0;
-        if (t <= epsilon && line_up) results.y = 0;
-        else if (t >= 1 - epsilon && !line_up) results.y = 0;
+        if (t < epsilon && line_up) results.y = 0;
+        else if (t > 1 - epsilon && !line_up) results.y = 0;
         else results.y = line_up ? 1 : -1;
         t = solutions.x;
     }
@@ -127,7 +128,6 @@ bool draw_bezier_stroke(uint2 tid, float2 coords,
                     Shape shape, QuadraticBezier bezier, 
                     StructuredBuffer<float2> points,
                     RWTexture2D<float4> image) {
-
     int itr_start = bezier.pts_begin;
     int itr_end = bezier.pts_end;
     
@@ -154,11 +154,9 @@ bool draw_bezier_stroke(uint2 tid, float2 coords,
         bool p0_is_round = bezier.closed || indices.x > itr_start;
         bool p1_is_round = bezier.closed || indices.z < itr_end - 1;
         if (p0_is_round && length(a - d) < shape.stroke_width/2) {
-            set_pixel_with_alpha(tid, shape.stroke_rgba, image);
             return true;
         }
         if (p1_is_round && length(c - d) < shape.stroke_width/2) {
-            set_pixel_with_alpha(tid, shape.stroke_rgba, image);
             return true;
         }
 
@@ -219,7 +217,6 @@ bool draw_bezier_stroke(uint2 tid, float2 coords,
         );
         
         if (length(closest_point - q) <= shape.stroke_width / 2) {
-            set_pixel_with_alpha(tid, shape.stroke_rgba, image);
             return true;
         }
     }

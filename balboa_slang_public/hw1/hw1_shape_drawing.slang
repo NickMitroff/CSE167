@@ -31,17 +31,20 @@ float4 draw_circle(uint2 tid, float2 scaled_coords,
                     RWTexture2D<float4> image) {
 
     float4 set_pixel = image[tid];
-
+    bool draw_fill = false;
     if (shape.use_fill) {
         if (circle_should_draw_fill(scaled_coords, shape, circle, image)) {
+            draw_fill = true;
             set_pixel = set_pixel_with_alpha(tid, shape.fill_rgba, image);
         };
     }
 
     if (shape.use_stroke) {
         if (circle_should_draw_stroke(scaled_coords, shape, circle, image)) {
-                set_pixel = set_pixel_with_alpha(tid, shape.stroke_rgba, image);
-            }
+            // if drawing on top of fill color, then mix the colors
+            if (draw_fill) set_pixel = mix_colors(set_pixel, shape.stroke_rgba);
+            else set_pixel = set_pixel_with_alpha(tid, shape.stroke_rgba, image);
+        }
     }
 
     return set_pixel;

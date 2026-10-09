@@ -22,7 +22,6 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
     image[tid] = float4(background, 1.0);
     // TODO: your code here
     uint2 tid_fixed = uint2(tid.x, height - tid.y);
-    float4 color_avg = float4(0.0, 1.0, 1.0, 1.0);
 
 
     for(uint i = 0; i < num_shapes; i++){

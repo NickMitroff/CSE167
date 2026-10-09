@@ -20,29 +20,34 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
     {
         return;
     }
-uint2 tid_fixed = uint2(tid.x, height - tid.y);
+    uint2 tid_fixed = uint2(tid.x, height - tid.y);
     image[tid] = float4(background, 1.0);
 
-    // TODO: your code here
-
-    for (uint i = 0; i < num_shapes; i++) {
-        // for alpha test, draw the shapes BACK to FRONT
+    for(uint i = 0; i < num_shapes; i++){
         Shape shape = shapes[num_shapes - i - 1];
-        float2 coords =  get_transformed_coords(tid_fixed, shape.world_to_obj);
-        
-        if (shape.type == ShapeType.Circle) {
-            Circle circle = circles[shape.index];
-            draw_circle(tid, coords, shape, circle, image);
-        }
-        if(shape.type == ShapeType.Polyline){
-            Polyline polyline = polylines[shape.index];
-            draw_polyline(tid, coords, shape, polyline, points, image);
-        }
-        else if (shape.type == ShapeType.QuadraticBezier) {
-            QuadraticBezier bezier = quadratic_beziers[shape.index];
-            draw_bezier(tid, coords, shape, bezier, points, image);
-        }
-    }
+        float4 color = float4(0.0);
 
+        for(int xx = 0; xx < samples_per_axis; xx++){
+            for(int yy = 0; yy < samples_per_axis; yy++){
+                float2 p = float2(tid_fixed.x + xx/float(samples_per_axis),
+                                    tid_fixed.y + yy / float(samples_per_axis));
+                float2 coords = get_transformed_coords(p,shape.world_to_obj);
+                if(shape.type == ShapeType.Circle){
+                    Circle circle = circles[shape.index];
+                    color += draw_circle(tid, coords, shape, circle, image);
+                }
+                if(shape.type == ShapeType.Polyline){
+                    Polyline polyline = polylines[shape.index];
+                    color += draw_polyline(tid, coords, shape, polyline, points, image);
+                }
+                if (shape.type == ShapeType.QuadraticBezier) {
+                    QuadraticBezier bezier = quadratic_beziers[shape.index];
+                    color += draw_bezier(tid, coords, shape, bezier, points, image);
+                }
+            }
+        }
+        image[tid] = color / (samples_per_axis*samples_per_axis);
+    }
+   
     
 }
