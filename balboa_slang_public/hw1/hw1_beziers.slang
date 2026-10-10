@@ -160,8 +160,10 @@ bool draw_bezier_stroke(uint2 tid, float2 coords,
             return true;
         }
 
-
-        
+        float2 p0 = a;
+        float2 p1 = b;
+        float2 p2 = c;
+        float2 q = d;
 
         // LLM DISCLOSURE:
         // To avoid the headache of computing a bunch of 4th-degree polynomials,
@@ -171,53 +173,39 @@ bool draw_bezier_stroke(uint2 tid, float2 coords,
         // OpenAI Codex was used to extract the coefficients and write
         // the below snippet of code storing them in variables t3, t2, t1, and t0
         // -Nick
-        
         float2 t3 =  4*a*a + 16*b*b + 4*c*c + 8*c*a
           - 16*a*b - 16*c*b;
-
         float2 t2 = -12*a*a - 24*b*b - 12*c*a
                 + 36*a*b + 12*c*b;
-
         float2 t1 =  12*a*a + 8*b*b + 4*c*a
                 - 24*a*b - 4*c*d + 8*d*b - 4*d*a;
-
         float2 t0 = 4*a*b - 4*a*a - 4*d*b + 4*d*a;
+        // ^ the code written by AI
 
-        // ^^ the code written by AI ^^
-
-        float3 solutions = float3(0, 0, 0);
-        float t = 100;
-        solve_cubic(t3.x + t3.y, t2.x + t2.y, t1.x + t1.y, t0.x + t0.y, solutions);
-        //else return false;
-        float2 p0 = a;
-        float2 p1 = b;
-        float2 p2 = c;
-        float2 q = d;
-        if (solutions.x > 0 && solutions.x <= 1) t = solutions.x;
-        if (solutions.y > 0 && solutions.y <= 1) t = solutions.y;
-        if (solutions.z > 0 && solutions.z <= 1) t = solutions.z;
-        // float2 solutions = float2(0, 0);
-        // float t;
-        // solve_quadratic(0, -1, 250, solutions);
-        // //else return false;
-        // float2 p0 = a;
-        // float2 p1 = b;
-        // float2 p2 = c;
-        // float2 q = d;
-        // if (solutions.x > 0 && solutions.x <= 1000) t = solutions.x;
-        // else if (solutions.y > 0 && solutions.y <= 1000) t = solutions.y;
-
-        float2 closest_point = float2(
-            (1 - t) * (1 - t) * p0.x
-                + 2 * (1 - t) * t * p1.x
-                + t * t * p2.x,
-            (1 - t) * (1 - t) * p0.y
-                + 2 * (1 - t) * t * p1.y
-                + t * t * p2.y,
-        );
-        
-        if (length(closest_point - q) <= shape.stroke_width / 2) {
-            return true;
+        float3 solutions;
+        solve_cubic(t3.x + t3.y, t2.x + t2.y,
+                    t1.x + t1.y, t0.x + t0.y, solutions);
+        float half_width = shape.stroke_width / 2;
+        // there was an issue where Windows and Linux put out the cubic roots
+        // in a different (undefined) order,
+        // so we have to loop through all the solutions
+        for (int root = 0; root < 3; root++) {
+            float t = solutions[root];
+            if (t > 0 && t < 1) {
+                float one_minus_t = 1 - t;
+                float2 closest_point = float2(
+                    (1 - t) * (1 - t) * p0.x
+                        + 2 * (1 - t) * t * p1.x
+                        + t * t * p2.x,
+                    (1 - t) * (1 - t) * p0.y
+                        + 2 * (1 - t) * t * p1.y
+                        + t * t * p2.y,
+                );
+                float2 offset = closest_point - d;
+                if (length(closest_point - q) <= shape.stroke_width / 2) {
+                    return true;
+                }
+            }
         }
     }
     
@@ -261,4 +249,3 @@ bool2 check_roots(float2 p0, float2 p1, float2 p2, float2 q, out float2 solution
     return roots_valid;
     
 }
-
