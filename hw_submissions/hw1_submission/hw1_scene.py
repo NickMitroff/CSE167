@@ -1,0 +1,318 @@
+import json
+import slangpy as spy
+import numpy as np
+import buffer
+import math
+
+# Must match Slang's struct definition
+CIRCLE = 0
+POLYLINE = 1
+QUADRATIC_BEZIER = 2
+
+class Scene:
+    """
+        A Scene contains the following:
+        resolution -> (int, int)
+        background -> (float, float, float, float) (RGBA)
+        duration -> float
+        shapes -> [Shape]
+        circles -> [Circle]
+        polylines -> [Polyline]
+        quadratic_beziers -> [QuadraticBezier]
+        points -> [(float, float)]
+
+        where
+        Shape: {'type': CIRCLE | POLYLINE | QUADRATIC_BEZIER,
+                'index': int,
+                'use_fill': bool,
+                'fill_rgba': (float, float, float, float),
+                'use_stroke': bool,
+                'stroke_rgba': (float, float, float, float),
+                'stroke_width': float,
+                'keyframes': Transformation}
+        (what type of the shape is, and the index in the corresponding array,
+         and stroke/fill rgba)
+
+        Circle: {'center': (x, y),
+                 'radius': float}
+
+        Polyline: {'pts_begin': int,
+                   'pts_end': int,
+                   'closed': bool}
+        (pts_begin and pts_end point to corresponding locations in the points array)
+
+        QuadraticBezier: {'pts_begin': int,
+                          'pts_end': int,
+                          'closed': bool}
+        (pts_begin and pts_end point to corresponding locations in the points array)
+
+        Transformation: {'time': float,
+                         'transform': [{'scale'|'translate'|'rotate'|'shear_x'|'shear_y': transformation values}]}
+    """
+    def __init__(self,
+                 resolution,
+                 background,
+                 duration,
+                 samples_per_axis,
+                 shapes,
+                 circles,
+                 polylines,
+                 quadratic_beziers,
+                 points):
+        self.resolution = resolution
+        self.background = background
+        self.duration = duration
+        self.samples_per_axis = samples_per_axis
+        self.shapes = shapes
+        self.circles = circles
+        self.polylines = polylines
+        self.quadratic_beziers = quadratic_beziers
+        self.points = points
+
+    def __repr__(self):
+        return (
+            f"Scene(\n"
+            f"  resolution={self.resolution},\n"
+            f"  background={self.background},\n"
+            f"  shapes={self.shapes},\n"
+            f"  circles={self.circles},\n"
+            f"  polylines={self.polylines},\n"
+            f"  quadratic_beziers={self.quadratic_beziers},\n"
+            f"  points={self.points}\n"
+            f")"
+        )
+
+# helper function
+def add_curves(obj, new_points, closed,
+               points, shape_type, curves, shapes):
+    # sometimes new_points might be [[1.0, 2.0], [3.0, 4.0], ...]
+    # below we normalize the new_points into a flat array
+    new_points = np.asarray(new_points, dtype=np.float32).reshape(-1).tolist()
+
+    pts_begin = len(points) // 2
+    points += new_points
+    pts_end = len(points) // 2
+
+    curves.append({
+        'pts_begin': pts_begin,
+        'pts_end': pts_end,
+        'closed': closed,
+    })
+
+    shapes.append({
+        'type': shape_type,
+        'index': len(curves) - 1,
+        'use_fill': 'fill_rgba' in obj,
+        'fill_rgba': obj.get('fill_rgba', (0.0, 0.0, 0.0, 0.0)),
+        'use_stroke': 'stroke_rgba' in obj,
+        'stroke_rgba': obj.get('stroke_rgba', (0.0, 0.0, 0.0, 0.0)),
+        'stroke_width': obj.get('stroke_width', 1.0),
+    })
+
+def parse_scene(filename : str) -> Scene:
+    with open(filename, 'r') as f:
+        scene = json.load(f)
+        
+        resolution = scene['resolution']
+        background = scene['background']
+        duration = scene['duration'] if 'duration' in scene else 1.0
+        samples_per_axis = scene['samples_per_axis'] if 'samples_per_axis' in scene else 4
+        shapes = []
+        circles = []
+        polylines = []
+        quadratic_beziers = []
+        points = []
+
+        for obj in scene['objects']:
+            if obj['type'] == 'circle':
+                center = obj['center'] if 'center' in obj else (0.0, 0.0)
+                radius = obj['radius'] if 'radius' in obj else 1.0
+                circles.append({
+                    'center': center,
+                    'radius': radius
+                })
+
+                shapes.append({
+                    'type': CIRCLE,
+                    'index': len(circles) - 1,
+                    'use_fill': 'fill_rgba' in obj,
+                    'fill_rgba': obj['fill_rgba'] if 'fill_rgba' in obj else (0.0, 0.0, 0.0, 0.0),
+                    'use_stroke': 'stroke_rgba' in obj,
+                    'stroke_rgba': obj['stroke_rgba'] if 'stroke_rgba' in obj else (0.0, 0.0, 0.0, 0.0),
+                    'stroke_width': obj['stroke_width'] if 'stroke_width' in obj else 1.0
+                })
+            elif obj['type'] == 'polyline':
+                add_curves(obj, obj['points'], obj['closed'] if 'closed' in obj else True,
+                           points, POLYLINE, polylines, shapes)
+            elif obj['type'] == 'triangle':
+                p0 = obj['p0'] if 'p0' in obj else [0.0, 0.0]
+                p1 = obj['p1'] if 'p1' in obj else [1.0, 0.0]
+                p2 = obj['p2'] if 'p2' in obj else [0.0, 1.0]
+                tri_pts = p0 + p1 + p2
+                add_curves(obj, tri_pts, True,
+                           points, POLYLINE, polylines, shapes)
+            elif obj['type'] == 'rectangle':
+                x0, y0 = obj['p_min'] if 'p_min' in obj else [0.0, 0.0]
+                x1, y1 = obj['p_max'] if 'p_max' in obj else [1.0, 1.0]
+
+                rect_points = [
+                    x0, y0, x1, y0, x1, y1, x0, y1,
+                ]
+
+                add_curves(obj, rect_points, True,
+                           points, POLYLINE, polylines, shapes)
+            elif obj['type'] == 'quadratic_bezier':
+                add_curves(obj, obj['points'], obj['closed'] if 'closed' in obj else True,
+                           points, QUADRATIC_BEZIER, quadratic_beziers, shapes)
+
+            if 'transform' in obj:
+                shapes[-1]['transform'] = obj['transform']
+            if 'transform_keyframes' in obj:
+                shapes[-1]['transform_keyframes'] = obj['transform_keyframes']
+
+    points = np.array(points, dtype=np.float32).reshape(-1, 2)
+
+    return Scene(resolution,
+                 background,
+                 duration,
+                 samples_per_axis,
+                 shapes,
+                 circles,
+                 polylines,
+                 quadratic_beziers,
+                 points)
+
+def compose_transformation(transforms):
+    """
+        Given a list of transformations, compose them into a matrix.
+    """
+
+    F = np.eye(3, dtype=np.float32)
+    #print(transforms)
+    for transform in transforms:
+        pass
+        # TODO: your code here
+
+        S = np.eye(2,dtype=np.float32) #scale
+        H = np.eye(2,dtype=np.float32) #shear
+        R = np.eye(2,dtype=np.float32) #rotation
+        T = np.eye(3,dtype=np.float32) #rotation
+        #Set Up the Matrix of the given transform.
+        if 'scale' in transform:
+            #print(f"scale: {transform['scale'][0]}, {transform["scale"][1]}")
+            S[0,0] = transform['scale'][0]
+            S[1,1] = transform['scale'][1]
+        if 'translate' in transform:
+            T[0, 2] = transform['translate'][0]
+            T[1, 2] = transform['translate'][1]
+        if 'shear_x' in transform:
+            #print(f"shear_x: {transform['shear_x'][0]}")
+            H[0, 1] = transform['shear_x'][0] 
+        if 'shear_y' in transform:
+            #print(f"shear_y: {transform['shear_y'][0]}")
+            H[1, 0] = transform['shear_y'][0]
+        if 'rotate' in transform:
+            angle = math.radians(transform['rotate'][0])
+            #print(f"angle (degrees): {transform['rotate'][0]}")
+
+            R[0,0] = math.cos(angle) 
+            R[0,1] = -math.sin(angle)
+            R[1,0] = math.sin(angle)
+            R[1,1] = math.cos(angle)
+
+        # each iteration of this loop only includes one of the transforms
+        # so we need to apply just the transforms that were set to F
+        # because S H R and T were initialized as the identity matrix
+        # they wont do anything unless we've set their values in this loop iteration
+        A = (S @ H) @ R
+        T[0,0] = A[0,0]
+        T[0,1] = A[0,1]
+        T[1,0] = A[1,0]
+        T[1,1] = A[1,1]
+
+        # LLM use disclosure:
+        # I consulted OpenAI Codex for a bit of help with these matrices
+        # when I was having trouble applying the shear & rotate transformations
+        # and knew that the issue was somewhere in this function
+        # The problem ended up being this line of code, which previously said
+        # "F = F @ T"
+        # According to Codex, this was the wrong order to multiply these matrices,
+        # as it resulted in the shear/rotate transforms being applied *after* the scale transform
+        # when they should be applied before
+        # The rest of the code apart from this line was hand-written by us <3
+        # - Nick
+        F = T @ F
+    return F
+
+def interpolate_transformation(transform_keyframes, t):
+    # TODO: your code here
+    transforms = []
+    #Find t0 ans t1
+    k0 = None
+    k1 = None
+    for keyframe in range(len(transform_keyframes) - 1):
+        k0 = transform_keyframes[keyframe]
+        k1 = transform_keyframes[keyframe+1]
+        if(t > k0["time"] and t < k1["time"]):
+            break
+
+    w = (t-k0["time"])/(k1["time"]-k0["time"])
+    tfArray = k0["transform"]
+    for idx in range(len(tfArray)):
+        if "rotate" in tfArray[idx]:
+            transforms.append({"rotate": [interpolate(w,k0["transform"][idx]["rotate"][0], 
+                                                      k1["transform"][idx]["rotate"][0])]})
+        if "shear_x" in tfArray[idx]:
+            transforms.append({"shear_x": [interpolate(w,k0["transform"][idx]["shear_x"][0], 
+                                                      k1["transform"][idx]["shear_x"][0])]})
+        if "shear_y" in tfArray[idx]:
+            transforms.append({"shear_x": [interpolate(w,k0["transform"][idx]["shear_y"][0], 
+                                                                  k1["transform"][idx]["shear_y"][0])]})
+        if "scale" in tfArray[idx]:
+            transforms.append({"scale": [interpolate(w,k0["transform"][idx]["scale"][0], k1["transform"][idx]["scale"][0]),
+                                         interpolate(w,k0["transform"][idx]["scale"][1], k1["transform"][idx]["scale"][1])]})
+        if "translate" in tfArray[idx]:
+            transforms.append({"translate": [interpolate(w,k0["transform"][idx]["translate"][0], k1["transform"][idx]["translate"][0]),
+                                         interpolate(w,k0["transform"][idx]["translate"][1], k1["transform"][idx]["translate"][1])]})
+    return transforms
+
+def upload_scene(scene, module, slang_device, t=0.0):
+    # Keyframe parameters are interpolated on the CPU;
+    # For simplicity, we re-upload the scene buffers every frame,
+    # even though most scene data does not change.
+    # This can be slow in practice.
+
+    shapes = []
+    for shape in scene.shapes:
+        new_shape = shape.copy()
+        new_shape.pop("transform", None)
+        new_shape.pop("transform_keyframes", None)
+        new_shape['world_to_obj'] = np.eye(3, dtype=np.float32)
+
+        # compose_transformation returns object -> world.
+        # the shader receives the inverse because hit tests are done in object space
+        if 'transform' in shape:
+            obj_to_world = compose_transformation(shape['transform'])
+            #print(obj_to_world)
+            new_shape['world_to_obj'] = np.linalg.inv(obj_to_world)
+            #print(np.linalg.inv(obj_to_world))
+        if 'transform_keyframes' in shape:
+            transforms = interpolate_transformation(shape['transform_keyframes'], t)
+            obj_to_world = compose_transformation(transforms)
+            new_shape['world_to_obj'] = np.linalg.inv(obj_to_world)
+        
+        shapes.append(new_shape)
+
+    return {
+        'background': scene.background,
+        'samples_per_axis': scene.samples_per_axis,
+        'shapes': buffer.create_structured_buffer(slang_device, module.Shape, shapes),
+        'num_shapes': len(shapes),
+        'circles': buffer.create_structured_buffer(slang_device, module.Circle, scene.circles),
+        'polylines': buffer.create_structured_buffer(slang_device, module.Polyline, scene.polylines),
+        'quadratic_beziers': buffer.create_structured_buffer(slang_device, module.QuadraticBezier, scene.quadratic_beziers),
+        'points': buffer.structured_buffer_from_numpy(slang_device, scene.points),
+    }
+
+def interpolate(w, x0, x1):
+    return (1 - w)*x0 + w*x1
