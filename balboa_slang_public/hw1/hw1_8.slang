@@ -21,6 +21,11 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
         return;
     }
     uint2 tid_fixed = uint2(tid.x, height - tid.y);
+    // Uncomment this line of code to vertically flip the image
+    // Use this when drawing or rendering the SVG scenes, such as
+    // freeze_ray.json and icebreaker.json,
+    // or they'll appear upside-down
+    // tid_fixed = uint2(tid.x, tid.y);
     image[tid] = float4(background, 1.0);
 
     for(uint i = 0; i < num_shapes; i++){

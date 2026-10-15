@@ -8,6 +8,9 @@ float4 set_pixel_with_alpha(uint2 tid, float4 color_rgba, RWTexture2D<float4> im
     // apply alpha compositing
     float4 background = image[coords];
     float4 c0 = float4(color_rgba.x, color_rgba.y, color_rgba.z, 1.0);
+    // This code "squares" each of the colors to get them more accurate to the SVG images we wanted to recreate
+    // Uncomment it to see the SVGs with the better color accuracy:
+    // c0 = float4(color_rgba.x * color_rgba.x, color_rgba.y * color_rgba.y, color_rgba.z * color_rgba.z, 1.0);
     float a0 = color_rgba.w;
     float4 new_color = a0 * c0 + (1 - a0) * background;
     return new_color;
