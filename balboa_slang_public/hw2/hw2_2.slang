@@ -53,7 +53,46 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
     if (is_pos_01 == is_pos_12 && is_pos_12 == is_pos_20) point_in_triangle = true;
 
     if (point_in_triangle) {
-        color_image[ipixel] = float4(c0, 1.0);
+        //// interpolate Z ////
+
+        // get p0, p1, p2 (see hw page 6) //
+        float2 p0 = sp0;
+        float2 p1 = sp1;
+        float2 p2 = sp2;
+
+        // get vectors p->p0, p->p1, p->p2, p0->p1, p0->p2
+        float2 p_p0 = p0 - p;
+        float2 p_p1 = p1 - p;
+        float2 p_p2 = p2 - p;
+        float2 p0_p1 = p1 - p0;
+        float2 p0_p2 = p2 - p0;
+
+        // get area of triangles for barycentric coordinates //
+        float area_total = 0.5 * length(cross(float3(p0_p1, 0), float3(p0_p2, 0)));
+        float area_b0 = 0.5 * length(cross(float3(p_p1, 0), float3(p_p2, 0)));
+        float area_b1 = 0.5 * length(cross(float3(p_p0, 0), float3(p_p2, 0)));
+        float area_b2 = 0.5 * length(cross(float3(p_p0, 0), float3(p_p1, 0)));
+        
+
+        // get screen-space barycentric coordinates
+        float b0_prime = area_b0 / area_total;
+        float b1_prime = area_b1 / area_total;
+        float b2_prime = area_b2 / area_total;
+
+        // convert to object space barycentric coordinates (see page 8 eq. 15)
+        // We used LLMs to convert a screenshot of the equations into these code snippets,
+        // to save the hassle of writing all those parentheses and stuff
+        float b0 = (b0_prime / (inv_depth0)) / (b0_prime / (inv_depth0) + b1_prime / (inv_depth1) + b2_prime / (inv_depth2));
+        float b1 = (b1_prime / (inv_depth1)) / (b0_prime / (inv_depth0) + b1_prime / (inv_depth1) + b2_prime / (inv_depth2));
+        float b2 = (b2_prime / (inv_depth2)) / (b0_prime / (inv_depth0) + b1_prime / (inv_depth1) + b2_prime / (inv_depth2));
+
+        float z = b0 * inv_depth0 + b1 * inv_depth1 + b2 * inv_depth2;
+
+        if (depth_image[ipixel] < -z) {
+            depth_image[ipixel] = -z;
+            color_image[ipixel] = float4(c0, 1.0);
+        }
+
     }
     
 }

@@ -136,10 +136,6 @@ def hw2_2(args):
             c1 = mesh.vertex_colors[mesh.faces[tri_id][1]]
             c2 = mesh.vertex_colors[mesh.faces[tri_id][2]]
 
-            print(sp0)
-            print(sp1)
-            print(sp2)
-
 
             if aabb_min[0] > aabb_max[0] or aabb_min[1] > aabb_max[1]:
                 continue
