@@ -87,7 +87,12 @@ def hw2_2(args):
 
     def to_screen(p):
         # HW2.2: implement this (basically the same as HW2.1)
-        return (0.0, 0.0)
+        x_prime = -(p[0] / p[2])
+        y_prime = -(p[1] / p[2])
+
+        x_2prime = depth_image.width * (x_prime + args.s * a) / (2 * args.s * a)        
+        y_2prime = depth_image.height - depth_image.height * (y_prime + args.s) / (2 * args.s)       
+        return (int(x_2prime), int(y_2prime), -p[2])
 
     # splat the triangles onto the screen
     screen_vertices = [to_screen(mesh.vertices[vid, :]) for vid in range(mesh.vertices.shape[0])]
@@ -112,6 +117,25 @@ def hw2_2(args):
             # aabb_min & aabb_max like in 2.1
             # c0, c1, c2 from mesh.vertex_colors
             # use mesh.faces[tri_id] to obtain the vertex indices
+
+            # Replace
+            sp0 = spy.float2(float(screen_vertices[mesh.faces[tri_id][0]][0]), float(screen_vertices[mesh.faces[tri_id][0]][1]))
+            sp1 = spy.float2(float(screen_vertices[mesh.faces[tri_id][1]][0]), float(screen_vertices[mesh.faces[tri_id][1]][1]))
+            sp2 = spy.float2(float(screen_vertices[mesh.faces[tri_id][2]][0]), float(screen_vertices[mesh.faces[tri_id][2]][1]))
+
+            
+            # Replace
+            inv_depth0 = float(screen_vertices[mesh.faces[tri_id][0]][2])
+            inv_depth1 = float(screen_vertices[mesh.faces[tri_id][1]][2])
+            inv_depth2 = float(screen_vertices[mesh.faces[tri_id][2]][2])
+
+            aabb_min = (min(sp0[0],sp1[0],sp2[0]), min(sp0[1],sp1[1],sp2[1]))
+            aabb_max = (max(sp0[0],sp1[0],sp2[0]), max(sp0[1],sp1[1],sp2[1]))
+
+            c0 = mesh.vertex_colors[mesh.faces[tri_id][0]]
+            c1 = mesh.vertex_colors[mesh.faces[tri_id][1]]
+            c2 = mesh.vertex_colors[mesh.faces[tri_id][2]]
+
 
             if aabb_min[0] > aabb_max[0] or aabb_min[1] > aabb_max[1]:
                 continue
