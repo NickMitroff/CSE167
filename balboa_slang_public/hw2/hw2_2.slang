@@ -56,16 +56,16 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
         //// interpolate Z ////
 
         // get p0, p1, p2 (see hw page 6) //
-        float2 p0 = sp0;
-        float2 p1 = sp1;
-        float2 p2 = sp2;
+        float3 p0 = float3(sp0, 2);
+        float3 p1 = float3(sp1, 2);
+        float3 p2 = float3(sp2, 2);
 
         // get vectors p->p0, p->p1, p->p2, p0->p1, p0->p2
-        float2 p_p0 = p0 - p;
-        float2 p_p1 = p1 - p;
-        float2 p_p2 = p2 - p;
-        float2 p0_p1 = p1 - p0;
-        float2 p0_p2 = p2 - p0;
+        float2 p_p0 = sp0 - p;
+        float2 p_p1 = sp1 - p;
+        float2 p_p2 = sp2 - p;
+        float2 p0_p1 = sp1 - sp0;
+        float2 p0_p2 = sp2 - sp0;
 
         // get area of triangles for barycentric coordinates //
         float area_total = 0.5 * length(cross(float3(p0_p1, 0), float3(p0_p2, 0)));
@@ -80,16 +80,15 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
         float b2_prime = area_b2 / area_total;
 
         // convert to object space barycentric coordinates (see page 8 eq. 15)
-        // We used LLMs to convert a screenshot of the equations into these code snippets,
-        // to save the hassle of writing all those parentheses and stuff
-        float b0 = (b0_prime / (inv_depth0)) / (b0_prime / (inv_depth0) + b1_prime / (inv_depth1) + b2_prime / (inv_depth2));
-        float b1 = (b1_prime / (inv_depth1)) / (b0_prime / (inv_depth0) + b1_prime / (inv_depth1) + b2_prime / (inv_depth2));
-        float b2 = (b2_prime / (inv_depth2)) / (b0_prime / (inv_depth0) + b1_prime / (inv_depth1) + b2_prime / (inv_depth2));
+        float divide_by = b0_prime / (p0.z) + b1_prime / (p1.z) + b2_prime / (p2.z);
+        float b0 = (b0_prime / p0.z) / divide_by;
+        float b1 = (b0_prime / p1.z) / divide_by;
+        float b2 = (b0_prime / p2.z) / divide_by;
 
         float z = b0 * inv_depth0 + b1 * inv_depth1 + b2 * inv_depth2;
 
-        if (depth_image[ipixel] < -z) {
-            depth_image[ipixel] = -z;
+        if (depth_image[ipixel] > z) {
+            depth_image[ipixel] = z;
             color_image[ipixel] = float4(c0, 1.0);
         }
 
