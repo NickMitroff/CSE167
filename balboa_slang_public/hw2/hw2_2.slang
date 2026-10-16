@@ -52,5 +52,8 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
     // if all 3 edges are equal, then the point is in the triangle
     if (is_pos_01 == is_pos_12 && is_pos_12 == is_pos_20) point_in_triangle = true;
 
+    if (point_in_triangle) {
+        color_image[ipixel] = float4(c0, 1.0);
+    }
     
 }

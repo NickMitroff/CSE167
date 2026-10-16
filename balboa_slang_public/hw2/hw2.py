@@ -119,9 +119,9 @@ def hw2_2(args):
             # use mesh.faces[tri_id] to obtain the vertex indices
 
             # Replace
-            sp0 = spy.float2(float(screen_vertices[mesh.faces[tri_id][0]][0]), float(screen_vertices[mesh.faces[tri_id][0]][1]))
-            sp1 = spy.float2(float(screen_vertices[mesh.faces[tri_id][1]][0]), float(screen_vertices[mesh.faces[tri_id][1]][1]))
-            sp2 = spy.float2(float(screen_vertices[mesh.faces[tri_id][2]][0]), float(screen_vertices[mesh.faces[tri_id][2]][1]))
+            sp0 = spy.int2(int(screen_vertices[mesh.faces[tri_id][0]][0]), int(screen_vertices[mesh.faces[tri_id][0]][1]))
+            sp1 = spy.int2(int(screen_vertices[mesh.faces[tri_id][1]][0]), int(screen_vertices[mesh.faces[tri_id][1]][1]))
+            sp2 = spy.int2(int(screen_vertices[mesh.faces[tri_id][2]][0]), int(screen_vertices[mesh.faces[tri_id][2]][1]))
 
             
             # Replace
@@ -135,6 +135,10 @@ def hw2_2(args):
             c0 = mesh.vertex_colors[mesh.faces[tri_id][0]]
             c1 = mesh.vertex_colors[mesh.faces[tri_id][1]]
             c2 = mesh.vertex_colors[mesh.faces[tri_id][2]]
+
+            print(sp0)
+            print(sp1)
+            print(sp2)
 
 
             if aabb_min[0] > aabb_max[0] or aabb_min[1] > aabb_max[1]:
