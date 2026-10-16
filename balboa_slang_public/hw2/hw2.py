@@ -17,18 +17,26 @@ def hw2_1(args):
     img = buffer.create_texture_2d(slang_device, args.width, args.height)
 
     a = img.width / img.height
+    print(img.width, img.height)
     def to_screen(p):
         # HW2.1: implement this
         # access "s" using args.s
-        return (0.0, 0.0)
+        x_prime = -(p[0] / p[2])
+        y_prime = -(p[1] / p[2])
+
+        x_2prime = img.width * (x_prime + args.s * a) / (2 * args.s * a)        
+        y_2prime = img.height - img.height * (y_prime + args.s) / (2 * args.s)    
+        print(x_2prime)    
+        print(y_2prime)    
+        return (int(x_2prime), int(y_2prime))
 
     sp0 = to_screen(args.p0)
     sp1 = to_screen(args.p1)
     sp2 = to_screen(args.p2)
 
     # HW2.1: implement this
-    aabb_min = (0, 0)
-    aabb_max = (10, 10)
+    aabb_min = (min(sp0[0], sp1[0], sp2[0]), min(sp0[1], sp1[1], sp2[1]))
+    aabb_max = (max(sp0[0], sp1[0], sp2[0]), max(sp0[1], sp1[1], sp2[1]))
 
     vars = {'sp0': sp0,
             'sp1': sp1,
