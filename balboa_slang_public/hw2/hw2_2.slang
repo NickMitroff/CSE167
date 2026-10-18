@@ -82,14 +82,15 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
         // convert to object space barycentric coordinates (see page 8 eq. 15)
         float divide_by = b0_prime / (p0.z) + b1_prime / (p1.z) + b2_prime / (p2.z);
         float b0 = (b0_prime / p0.z) / divide_by;
-        float b1 = (b0_prime / p1.z) / divide_by;
-        float b2 = (b0_prime / p2.z) / divide_by;
+        float b1 = (b1_prime / p1.z) / divide_by;
+        float b2 = (b2_prime / p2.z) / divide_by;
 
         float z = b0 * inv_depth0 + b1 * inv_depth1 + b2 * inv_depth2;
 
         if (depth_image[ipixel] > z) {
             depth_image[ipixel] = z;
-            color_image[ipixel] = float4(c0, 1.0);
+            float3 c = b0 * c0 + b1 * c1 + b2 * c2;
+            color_image[ipixel] = float4(c, 1.0);
         }
 
     }
