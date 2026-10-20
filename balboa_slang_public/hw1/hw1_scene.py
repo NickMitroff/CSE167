@@ -196,7 +196,7 @@ def compose_transformation(transforms):
         S = np.eye(2,dtype=np.float32) #scale
         H = np.eye(2,dtype=np.float32) #shear
         R = np.eye(2,dtype=np.float32) #rotation
-        T = np.eye(3,dtype=np.float32) #rotation
+        T = np.eye(3,dtype=np.float32) #translation
         #Set Up the Matrix of the given transform.
         if 'scale' in transform:
             #print(f"scale: {transform['scale'][0]}, {transform["scale"][1]}")

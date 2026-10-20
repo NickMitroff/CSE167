@@ -186,10 +186,89 @@ def compose_transformations(transformations):
     """
     F = np.eye(4, dtype=np.float32)
 
-    for transform in transformations:
-        pass
-        # HW 2.3 TODO: your code here
+    # print('composing transformations...')
 
+    for transform in transformations:
+        # HW 2.3 TODO: your code here
+        # Now, the transformations are all 4x4 matrices
+        S = np.eye(4,dtype=np.float32) #scale
+        R = np.eye(4,dtype=np.float32) #rotation
+        T = np.eye(4,dtype=np.float32) #translation
+
+        #Set Up the Matrix of the given transform.
+        if 'scale' in transform:
+            # print('applying scale')
+            S[0,0] = transform['scale'][0]
+            S[1,1] = transform['scale'][1]
+            S[2,2] = transform['scale'][2]
+
+        if 'translate' in transform:
+            # print('applying translate')
+            T[0, 3] = transform['translate'][0]
+            T[1, 3] = transform['translate'][1]
+            T[2, 3] = transform['translate'][2]
+
+        if 'rotate_x' in transform:
+            # print('applying rotate_x')
+            angle = math.radians(transform['rotate_x'][0])
+            R[1,1] = math.cos(angle) 
+            R[1,2] = -math.sin(angle)
+            R[2,1] = math.sin(angle)
+            R[2,2] = math.cos(angle)
+
+        if 'rotate_y' in transform:
+            # print(f'applying rotate_y: {transform['rotate_y'][0]}')
+            angle = math.radians(transform['rotate_y'][0])
+            R[0,0] = math.cos(angle) 
+            R[0,2] = math.sin(angle)
+            R[2,0] = -math.sin(angle)
+            R[2,2] = math.cos(angle)
+
+        if 'rotate_z' in transform:
+            # print('applying rotate_z')
+            angle = math.radians(transform['rotate_z'][0])
+            R[0,0] = math.cos(angle) 
+            R[0,1] = -math.sin(angle)
+            R[1,0] = math.sin(angle)
+            R[1,1] = math.cos(angle)
+
+        if 'lookat' in transform: 
+            # print('applying lookat')
+            # build lookat transformation matrix (see hw2 page 12)
+            p = np.array(transform['lookat']['position'])
+            t = np.array(transform['lookat']['target'])
+            u = np.array(transform['lookat']['up'])
+            d = (t - p) / np.linalg.norm(t - p)
+            r = np.cross(d, u) / np.linalg.norm(np.cross(d, u))
+            u_prime = np.cross(r, d)
+
+            F[0, 0] = r[0]
+            F[1, 0] = r[1]
+            F[2, 0] = r[2]
+            F[0, 1] = u_prime[0]
+            F[1, 1] = u_prime[1]
+            F[2, 1] = u_prime[2]
+            F[0, 2] = -d[0]
+            F[1, 2] = -d[1]
+            F[2, 2] = -d[2]
+            F[0, 3] = p[0]
+            F[1, 3] = p[1]
+            F[2, 3] = p[2]
+
+            
+
+        # each iteration of this loop only includes one of the transforms
+        # so we need to apply just the transforms that were set to F
+        # because S H R and T were initialized as the identity matrix
+        # they wont do anything unless we've set their values in this loop iteration
+        A = S @ R
+        # select the top left 3x3 of the matrix to transfer over
+        # (this might be off by one idk)
+        T[0:3, 0:3] = A[0:3, 0:3]
+        F = T @ F
+    # print(f'transform matrix: \n{F}')
+    # print(f'translate matrix: \n{T}')
+    # print(f'scale+rotate matrix: \n{R}')
     return F
 
 def parse_scene(filename : str) -> Scene:
