@@ -333,8 +333,7 @@ def interpolate_transformation(transform_keyframes, t):
         k1 = transform_keyframes[keyframe+1]
         if(t > k0["time"] and t < k1["time"]):
             break
-
-    print(transform_keyframes)
+    
     w = (t-k0["time"])/(k1["time"]-k0["time"])
     tfArray = k0["transform"]
     for idx in range(len(tfArray)):
