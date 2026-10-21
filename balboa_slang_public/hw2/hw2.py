@@ -326,12 +326,15 @@ def interpolate_transformation(transform_keyframes, t):
     transforms = []
     k0 = None
     k1 = None
+    if len(transform_keyframes) == 0:
+           return []
     for keyframe in range(len(transform_keyframes) - 1):
         k0 = transform_keyframes[keyframe]
         k1 = transform_keyframes[keyframe+1]
         if(t > k0["time"] and t < k1["time"]):
             break
 
+    print(transform_keyframes)
     w = (t-k0["time"])/(k1["time"]-k0["time"])
     tfArray = k0["transform"]
     for idx in range(len(tfArray)):
@@ -346,7 +349,18 @@ def interpolate_transformation(transform_keyframes, t):
                                                         k1["transform"][idx]["rotate_z"][0])]})
         if "lookat" in tfArray[idx]:
             #TODO: implement this (it has to interpolate position, target, and up dir)
-            pass
+            lookat_0 = k0["transform"][idx]["lookat"]
+            lookat_1 = k1["transform"][idx]["lookat"]
+            transforms.append({"lookat": {
+                "position": [interpolate(w,lookat_0["position"][0],lookat_1["position"][0]),
+                             interpolate(w,lookat_0["position"][1],lookat_1["position"][1]),
+                             interpolate(w,lookat_0["position"][2],lookat_1["position"][2])],
+                "target": [interpolate(w,lookat_0["target"][0],lookat_1["target"][0]),
+                             interpolate(w,lookat_0["target"][1],lookat_1["target"][1]),
+                             interpolate(w,lookat_0["target"][2],lookat_1["target"][2])],
+                "up": [interpolate(w,lookat_0["up"][0],lookat_1["up"][0]),
+                        interpolate(w,lookat_0["up"][1],lookat_1["up"][1]),
+                        interpolate(w,lookat_0["up"][2],lookat_1["up"][2])]}})
 
         if "scale" in tfArray[idx]:
             transforms.append({"scale": [interpolate(w,k0["transform"][idx]["scale"][0], k1["transform"][idx]["scale"][0]),

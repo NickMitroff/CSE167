@@ -22,7 +22,7 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
         return;
     }
 
-    // TODO: HW 2.1
+    // TODO: HW 2.2
     // This code fills in the bounding box with black
     // which is nice for testing where the bounding box is drawn
     // image[ipixel] = float4(float3(0.0), 1.0);
@@ -44,9 +44,9 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
 
     // then, plug into the equation Eij(p) = (p - vi) * nij
     // and extract the sign
-    bool is_pos_01 = dot(p - sp0, normal_01) > 0;
-    bool is_pos_12 = dot(p - sp1, normal_12) > 0;
-    bool is_pos_20 = dot(p - sp2, normal_20) > 0;
+    bool is_pos_01 = dot(p - sp0, normal_01) >= 0;
+    bool is_pos_12 = dot(p - sp1, normal_12) >= 0;
+    bool is_pos_20 = dot(p - sp2, normal_20) >= 0;
 
     bool point_in_triangle = false;
     // if all 3 edges are equal, then the point is in the triangle
