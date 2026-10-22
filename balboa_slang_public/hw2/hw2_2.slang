@@ -44,9 +44,9 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
 
     // then, plug into the equation Eij(p) = (p - vi) * nij
     // and extract the sign
-    bool is_pos_01 = dot(p - sp0, normal_01) >= 0;
-    bool is_pos_12 = dot(p - sp1, normal_12) >= 0;
-    bool is_pos_20 = dot(p - sp2, normal_20) >= 0;
+    bool is_pos_01 = dot(p - sp0, normal_01) > 0;
+    bool is_pos_12 = dot(p - sp1, normal_12) > 0;
+    bool is_pos_20 = dot(p - sp2, normal_20) > 0;
 
     bool point_in_triangle = false;
     // if all 3 edges are equal, then the point is in the triangle
@@ -69,6 +69,7 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
 
         // get area of triangles for barycentric coordinates //
         float area_total = 0.5 * length(cross(float3(p0_p1, 0), float3(p0_p2, 0)));
+        if (area_total < 0.0001) return;
         float area_b0 = 0.5 * length(cross(float3(p_p1, 0), float3(p_p2, 0)));
         float area_b1 = 0.5 * length(cross(float3(p_p0, 0), float3(p_p2, 0)));
         float area_b2 = 0.5 * length(cross(float3(p_p0, 0), float3(p_p1, 0)));

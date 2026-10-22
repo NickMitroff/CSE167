@@ -90,7 +90,7 @@ def hw2_2(args):
 
         x_2prime = depth_image.width * (x_prime + args.s * a) / (2 * args.s * a)        
         y_2prime = depth_image.height - depth_image.height * (y_prime + args.s) / (2 * args.s)       
-        return (int(x_2prime), int(y_2prime), -p[2])
+        return (x_2prime, y_2prime, -p[2])
 
     # splat the triangles onto the screen
     screen_vertices = [to_screen(mesh.vertices[vid, :]) for vid in range(mesh.vertices.shape[0])]
@@ -116,9 +116,9 @@ def hw2_2(args):
             # c0, c1, c2 from mesh.vertex_colors
             # use mesh.faces[tri_id] to obtain the vertex indices
 
-            sp0 = spy.int2(int(screen_vertices[mesh.faces[tri_id][0]][0]), int(screen_vertices[mesh.faces[tri_id][0]][1]))
-            sp1 = spy.int2(int(screen_vertices[mesh.faces[tri_id][1]][0]), int(screen_vertices[mesh.faces[tri_id][1]][1]))
-            sp2 = spy.int2(int(screen_vertices[mesh.faces[tri_id][2]][0]), int(screen_vertices[mesh.faces[tri_id][2]][1]))
+            sp0 = screen_vertices[mesh.faces[tri_id][0]][0], screen_vertices[mesh.faces[tri_id][0]][1]
+            sp1 = screen_vertices[mesh.faces[tri_id][1]][0], screen_vertices[mesh.faces[tri_id][1]][1]
+            sp2 = screen_vertices[mesh.faces[tri_id][2]][0], screen_vertices[mesh.faces[tri_id][2]][1]
 
             
             inv_depth0 = float(screen_vertices[mesh.faces[tri_id][0]][2])
@@ -126,7 +126,14 @@ def hw2_2(args):
             inv_depth2 = float(screen_vertices[mesh.faces[tri_id][2]][2])
 
             aabb_min = (min(sp0[0],sp1[0],sp2[0]), min(sp0[1],sp1[1],sp2[1]))
-            aabb_max = (max(sp0[0],sp1[0],sp2[0]), max(sp0[1],sp1[1],sp2[1]))
+
+            # Here, AI helped identify a bug that occasionally produced single pixels of the wrong color
+            # Basically, because we add (0.5, 0.5) to our pixel coordinates to use pixel centers,
+            # these pixels may be skipped if they're on the edge of the AABB
+            # Adding +1 to each coordinate of aabb_max fixed this issue
+            # I (Nick) was curious if we could add +1 to each coordinate of aabb_min as well,
+            # but this caused a lot more pixels to get skipped
+            aabb_max = (max(sp0[0],sp1[0],sp2[0]) + 1, max(sp0[1],sp1[1],sp2[1]) + 1)
 
             c0 = mesh.vertex_colors[mesh.faces[tri_id][0]]
             c1 = mesh.vertex_colors[mesh.faces[tri_id][1]]
@@ -193,14 +200,12 @@ def hw2_3(args):
 
         x_screen = width * (x_prime + s * a) / (2 * s * a)
         y_screen = height - height * (y_prime + s) / (2 * s)
-        return (int(x_screen), int(y_screen), -p[2])
+        return (x_screen, y_screen, -p[2])
 
 
     # view matrix V
     # we want to convert from world to camera space
-    # so there's a chance we need to invert cam_to_world
-    # but idk if it actually does what we want
-    # view = camera.cam_to_world
+    # so invert cam_to_world
     view = np.linalg.inv(camera.cam_to_world)
 
     # camera_to_screen = np.zeros((4, 4), dtype=np.float32)
@@ -252,23 +257,20 @@ def hw2_3(args):
             screen_vertices = screen_vertices_list[mesh_id]
             inv_depth = inv_depth_list[mesh_id]
             for tri_id in range(mesh.faces.shape[0]):
-                # HW 2.3: implement this
-                # (basically the same as HW 2.2)
 
-
-                sp0 = spy.int2(int(screen_vertices[mesh.faces[tri_id][0]][0]), 
-                               int(screen_vertices[mesh.faces[tri_id][0]][1]))
-                sp1 = spy.int2(int(screen_vertices[mesh.faces[tri_id][1]][0]), 
-                               int(screen_vertices[mesh.faces[tri_id][1]][1]))
-                sp2 = spy.int2(int(screen_vertices[mesh.faces[tri_id][2]][0]), 
-                               int(screen_vertices[mesh.faces[tri_id][2]][1]))
+                # This notation allows it to store the points without crashing
+                # If we use spy.float2 to cast the coords to float2's, it crashes
+                # If we instead use spy.int2, it doesn't crash, but we lose too much precision
+                sp0 = screen_vertices[mesh.faces[tri_id][0]][0], screen_vertices[mesh.faces[tri_id][0]][1]
+                sp1 = screen_vertices[mesh.faces[tri_id][1]][0], screen_vertices[mesh.faces[tri_id][1]][1]
+                sp2 = screen_vertices[mesh.faces[tri_id][2]][0], screen_vertices[mesh.faces[tri_id][2]][1]
 
                 inv_depth0 = inv_depth[mesh.faces[tri_id][0]]
                 inv_depth1 = inv_depth[mesh.faces[tri_id][1]]
                 inv_depth2 = inv_depth[mesh.faces[tri_id][2]]
 
-                aabb_min = (min(sp0[0],sp1[0],sp2[0]), min(sp0[1],sp1[1],sp2[1]))
-                aabb_max = (max(sp0[0],sp1[0],sp2[0]), max(sp0[1],sp1[1],sp2[1]))
+                aabb_min = (min(sp0[0],sp1[0],sp2[0]), min(sp0[1],sp1[1],sp2[1]) + 1)
+                aabb_max = (max(sp0[0],sp1[0],sp2[0]), max(sp0[1],sp1[1],sp2[1]) + 1)
 
                 c0 = mesh.vertex_colors[mesh.faces[tri_id][0]]
                 c1 = mesh.vertex_colors[mesh.faces[tri_id][1]]
@@ -401,7 +403,7 @@ def hw2_4(args):
         
                 x_screen = width * (x_prime + s * a) / (2 * s * a)
                 y_screen = height - height * (y_prime + s) / (2 * s)
-                return (int(x_screen), int(y_screen), -p[2])
+                return (x_screen, y_screen, -p[2])
         
         screen_vertices_list = []
         inv_depth_list = []
@@ -452,22 +454,17 @@ def hw2_4(args):
             screen_vertices = screen_vertices_list[mesh_id]
             inv_depth = inv_depth_list[mesh_id]
             for tri_id in range(mesh.faces.shape[0]):
-                # HW 2.4 TODO: implement this
-                # (basically the same as HW 2.2 & 2.3)
 
-                sp0 = spy.int2(int(screen_vertices[mesh.faces[tri_id][0]][0]), 
-                                int(screen_vertices[mesh.faces[tri_id][0]][1]))
-                sp1 = spy.int2(int(screen_vertices[mesh.faces[tri_id][1]][0]), 
-                                int(screen_vertices[mesh.faces[tri_id][1]][1]))
-                sp2 = spy.int2(int(screen_vertices[mesh.faces[tri_id][2]][0]), 
-                                int(screen_vertices[mesh.faces[tri_id][2]][1]))
+                sp0 = screen_vertices[mesh.faces[tri_id][0]][0], screen_vertices[mesh.faces[tri_id][0]][1]
+                sp1 = screen_vertices[mesh.faces[tri_id][1]][0], screen_vertices[mesh.faces[tri_id][1]][1]
+                sp2 = screen_vertices[mesh.faces[tri_id][2]][0], screen_vertices[mesh.faces[tri_id][2]][1]
 
                 inv_depth0 = inv_depth[mesh.faces[tri_id][0]]
                 inv_depth1 = inv_depth[mesh.faces[tri_id][1]]
                 inv_depth2 = inv_depth[mesh.faces[tri_id][2]]
 
                 aabb_min = (min(sp0[0],sp1[0],sp2[0]), min(sp0[1],sp1[1],sp2[1]))
-                aabb_max = (max(sp0[0],sp1[0],sp2[0]), max(sp0[1],sp1[1],sp2[1]))
+                aabb_max = (max(sp0[0],sp1[0],sp2[0]) + 1, max(sp0[1],sp1[1],sp2[1]) + 1)
 
                 c0 = mesh.vertex_colors[mesh.faces[tri_id][0]]
                 c1 = mesh.vertex_colors[mesh.faces[tri_id][1]]
