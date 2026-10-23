@@ -400,13 +400,29 @@ def hw2_4(args):
                 x_prime = -(p[0] / p[2])
                 y_prime = -(p[1] / p[2])
                 s = camera.s
-        
+
                 x_screen = width * (x_prime + s * a) / (2 * s * a)
                 y_screen = height - height * (y_prime + s) / (2 * s)
                 return (x_screen, y_screen, -p[2])
         
         screen_vertices_list = []
         inv_depth_list = []
+
+        projection = np.array([
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, 0, 1],
+                [0, 0, -1, 0]
+            ], dtype=np.float32)
+        s = camera.s
+        camera_to_screen = np.array([
+            [width/(2 * s * a), 0.0, 0.0, width / 2],
+            [0.0, -height/(2*s), 0.0, height - (height / 2)],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0]
+            ], dtype=np.float32)
+        # camera_to_screen = projection @ camera_to_screen
+        
         for mesh in scene.meshes:
             # HW 2.4 TODO: insert your code here and fill in the MVP matrix
             # by using interpolate_transformation to compute the model matrix at time t
@@ -427,14 +443,27 @@ def hw2_4(args):
             scaled_vertices = []
     
             for v in vertices:
+                # v_prime = view @ model @ v
+                # v_prime = to_screen(v_prime)
+
+
                 v_prime = view @ model @ v
-                v_prime = to_screen(v_prime)
+                v_prime = projection @ v_prime
+                v_prime /= v_prime[3]
+                v_prime[2] = 1 / v_prime[2]
+                # v_prime[2] *= -1
+                # v_prime[0] /= v_prime[2]
+                # v_prime[1] /= v_prime[2]
+                v_prime = camera_to_screen @ v_prime
+                # v_prime /= v_prime[3]
+                # print(v_prime)
                 scaled_vertices.append(v_prime)
             scaled_vertices = np.array(scaled_vertices)
     
             inv_depth_list.append(np.ascontiguousarray(scaled_vertices[:, 2]))
             screen_vertices_list.append(np.ascontiguousarray(scaled_vertices[:, :2]))
-
+        print(inv_depth_list)
+        print(screen_vertices_list)
         
         # Clear color buffer
         command_encoder.clear_texture_float(
@@ -596,7 +625,7 @@ def hw2_5(args):
         [0.0, 0.0, 0.0, 1.0],
         [0.0, 0.0, 0.0, 1.0]
         ], dtype=np.float32)
-    camera_to_screen = projection @ np.inv(camera_to_screen)
+    camera_to_screen = projection @ np.linalg.inv(camera_to_screen)
 
     def render_frame(command_encoder, t):
         t = t % scene.duration
