@@ -54,8 +54,21 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
 
     if (point_in_triangle) {
         //// interpolate Z ////
+        float4 z = interpolate_barycentric(sp0, sp1, sp2, inv_depth0, inv_depth1, inv_depth2, p);
 
-        // get p0, p1, p2 (see hw page 6) //
+        if (depth_image[ipixel] > z[0]) {
+            depth_image[ipixel] = z[0];
+            float3 c = z[1] * c0 + z[2] * c1 + z[3] * c2;
+            color_image[ipixel] = float4(c, 1.0);
+        }
+
+    }
+    
+}
+
+float4 interpolate_barycentric(float2 sp0, float2 sp1, float2 sp2, float inv_depth0, float inv_depth1, float inv_depth2,
+            float2 p) {
+    // get p0, p1, p2 (see hw page 6) //
         float3 p0 = float3(sp0, 2);
         float3 p1 = float3(sp1, 2);
         float3 p2 = float3(sp2, 2);
@@ -69,7 +82,7 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
 
         // get area of triangles for barycentric coordinates //
         float area_total = 0.5 * length(cross(float3(p0_p1, 0), float3(p0_p2, 0)));
-        if (area_total < 0.0001) return;
+        if (area_total < 0.0001) return float.maxValue;
         float area_b0 = 0.5 * length(cross(float3(p_p1, 0), float3(p_p2, 0)));
         float area_b1 = 0.5 * length(cross(float3(p_p0, 0), float3(p_p2, 0)));
         float area_b2 = 0.5 * length(cross(float3(p_p0, 0), float3(p_p1, 0)));
@@ -87,13 +100,5 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
         float b2 = (b2_prime / p2.z) / divide_by;
 
         float z = b0 * inv_depth0 + b1 * inv_depth1 + b2 * inv_depth2;
-
-        if (depth_image[ipixel] > z) {
-            depth_image[ipixel] = z;
-            float3 c = b0 * c0 + b1 * c1 + b2 * c2;
-            color_image[ipixel] = float4(c, 1.0);
-        }
-
-    }
-    
+        return float4(z, b0, b1, b2);
 }
