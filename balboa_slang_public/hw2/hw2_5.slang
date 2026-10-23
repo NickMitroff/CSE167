@@ -55,8 +55,17 @@ void rasterize_depth(
     float3 sp0 = projected_vertices[v0];
     float3 sp1 = projected_vertices[v1];
     float3 sp2 = projected_vertices[v2];
-
     
+    float inv_depth0 = sp0.z;
+    float inv_depth1 = sp1.z;
+    float inv_depth2 = sp2.z;
+    
+    //float inv_depth0 = inv_depth[mesh.faces[tri_id][0]]
+    //float inv_depth1 = inv_depth[mesh.faces[tri_id][1]]
+    //float inv_depth2 = inv_depth[mesh.faces[tri_id][2]]
+
+    //aabb_min = (min(sp0[0],sp1[0],sp2[0]), min(sp0[1],sp1[1],sp2[1]))
+    //aabb_max = (max(sp0[0],sp1[0],sp2[0]) + 1, max(sp0[1],sp1[1],sp2[1]) + 1)
 
 }
 

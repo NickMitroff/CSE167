@@ -269,8 +269,8 @@ def hw2_3(args):
                 inv_depth1 = inv_depth[mesh.faces[tri_id][1]]
                 inv_depth2 = inv_depth[mesh.faces[tri_id][2]]
 
-                aabb_min = (min(sp0[0],sp1[0],sp2[0]), min(sp0[1],sp1[1],sp2[1]) + 1)
-                aabb_max = (max(sp0[0],sp1[0],sp2[0]), max(sp0[1],sp1[1],sp2[1]) + 1)
+                aabb_min = (min(sp0[0],sp1[0],sp2[0]), min(sp0[1],sp1[1],sp2[1]))
+                aabb_max = (max(sp0[0],sp1[0],sp2[0]) + 1, max(sp0[1],sp1[1],sp2[1]) + 1)
 
                 c0 = mesh.vertex_colors[mesh.faces[tri_id][0]]
                 c1 = mesh.vertex_colors[mesh.faces[tri_id][1]]
@@ -584,7 +584,19 @@ def hw2_5(args):
     projection = np.zeros((4, 4), dtype=np.float32)
     camera_to_screen = np.zeros((4, 4), dtype=np.float32)
 
-    
+    projection = np.array([
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 0, 1],
+        [0, 0, -1, 0]
+    ])
+    camera_to_screen = np.array([
+        [width/(2*a*camera.s), 0.0, 0.0, width],
+        [0.0, height/(2*camera.s), 0.0, height/2],
+        [0.0, 0.0, 0.0, 1.0],
+        [0.0, 0.0, 0.0, 1.0]
+        ], dtype=np.float32)
+    camera_to_screen = projection @ np.inv(camera_to_screen)
 
     def render_frame(command_encoder, t):
         t = t % scene.duration
@@ -604,7 +616,6 @@ def hw2_5(args):
         for mesh, offset in zip(scene.meshes, vertex_offsets):
             # HW 2.5 TODO: implement this (basically the same as 2.4)
             MVP = np.zeros((4, 4), dtype=np.float32)
-
 
 
             transform_vertices_shader.kernel.dispatch(\
