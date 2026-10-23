@@ -44,6 +44,20 @@ void rasterize_depth(
         StructuredBuffer<float3> projected_vertices,
         RWStructuredBuffer<uint> depth_buffer) {
     // HW 2.5 TODO
+
+    //If there are more threads than triangles, don't do anything. 
+    if(tid >= num_triangles) return; 
+
+    int v0 = faces[tid][0];
+    int v1 = faces[tid][1];
+    int v2 = faces[tid][2];
+    
+    float3 sp0 = projected_vertices[v0];
+    float3 sp1 = projected_vertices[v1];
+    float3 sp2 = projected_vertices[v2];
+
+    
+
 }
 
 [shader("compute")]

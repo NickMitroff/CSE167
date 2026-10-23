@@ -584,11 +584,13 @@ def hw2_5(args):
     projection = np.zeros((4, 4), dtype=np.float32)
     camera_to_screen = np.zeros((4, 4), dtype=np.float32)
 
+    
+
     def render_frame(command_encoder, t):
         t = t % scene.duration
         # HW 2.5 TODO: implement this (basically the same as 2.4)
         world_to_screen = np.zeros((4, 4), dtype=np.float32)
-
+        
         command_encoder.clear_texture_float(
             color_image,
             clear_value=spy.float4(scene.background[0],
@@ -602,6 +604,9 @@ def hw2_5(args):
         for mesh, offset in zip(scene.meshes, vertex_offsets):
             # HW 2.5 TODO: implement this (basically the same as 2.4)
             MVP = np.zeros((4, 4), dtype=np.float32)
+
+
+
             transform_vertices_shader.kernel.dispatch(\
                 thread_count=[mesh.vertices.shape[0], 1, 1],
                 command_encoder=command_encoder,
