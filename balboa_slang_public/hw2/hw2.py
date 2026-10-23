@@ -410,9 +410,9 @@ def hw2_4(args):
 
         projection = np.array([
                 [1, 0, 0, 0],
-                [0, 1, 0, 0],
+                [0, -1, 0, 0],
                 [0, 0, 0, 1],
-                [0, 0, -1, 0]
+                [0, 0, 1, 0]
             ], dtype=np.float32)
         s = camera.s
         camera_to_screen = np.array([
@@ -443,25 +443,30 @@ def hw2_4(args):
             scaled_vertices = []
     
             for v in vertices:
-                # v_prime = view @ model @ v
                 # v_prime = to_screen(v_prime)
 
 
-                v_prime = view @ model @ v
-                v_prime = projection @ v_prime
+                # projection[0][0] = 1 / -v_prime[2]
+                # projection[1][1] = 1 / -v_prime[2]
+                MVP = camera_to_screen @ projection @ view @ model
+                v_prime = MVP @ v
+                # print(f'before projection: {v_prime}')
                 v_prime /= v_prime[3]
-                v_prime[2] = 1 / v_prime[2]
-                # v_prime[2] *= -1
-                # v_prime[0] /= v_prime[2]
-                # v_prime[1] /= v_prime[2]
-                v_prime = camera_to_screen @ v_prime
-                # v_prime /= v_prime[3]
-                # print(v_prime)
+                # v_prime = projection @ v_prime
+                # # v_prime /= v_prime[3]
+                # # v_prime[2] = 1 / v_prime[2]
+                # print(f'after projection: {v_prime}')
+                # # v_prime[2] *= -1
+                # # v_prime[0] /= v_prime[2]
+                # # v_prime[1] /= v_prime[2]
+                # v_prime = camera_to_screen @ v_prime
+                # # v_prime /= v_prime[3]
+                # # print(v_prime)
                 scaled_vertices.append(v_prime)
             scaled_vertices = np.array(scaled_vertices)
     
-            inv_depth_list.append(np.ascontiguousarray(scaled_vertices[:, 2]))
-            screen_vertices_list.append(np.ascontiguousarray(scaled_vertices[:, :2]))
+        inv_depth_list.append(np.ascontiguousarray(scaled_vertices[:, 2]))
+        screen_vertices_list.append(np.ascontiguousarray(scaled_vertices[:, :2]))
         print(inv_depth_list)
         print(screen_vertices_list)
         
@@ -613,19 +618,19 @@ def hw2_5(args):
     projection = np.zeros((4, 4), dtype=np.float32)
     camera_to_screen = np.zeros((4, 4), dtype=np.float32)
 
+    s = camera.s
     projection = np.array([
-        [1, 0, 0, 0],
-        [0, 1, 0, 0],
-        [0, 0, 0, 1],
-        [0, 0, -1, 0]
-    ])
+                [1, 0, 0, 0],
+                [0, -1, 0, 0],
+                [0, 0, 0, 1],
+                [0, 0, 1, 0]
+            ], dtype=np.float32)
     camera_to_screen = np.array([
-        [width/(2*a*camera.s), 0.0, 0.0, width],
-        [0.0, height/(2*camera.s), 0.0, height/2],
-        [0.0, 0.0, 0.0, 1.0],
+        [width/(2 * s * a), 0.0, 0.0, width / 2],
+        [0.0, -height/(2*s), 0.0, height - (height / 2)],
+        [0.0, 0.0, 1.0, 0.0],
         [0.0, 0.0, 0.0, 1.0]
         ], dtype=np.float32)
-    camera_to_screen = projection @ np.linalg.inv(camera_to_screen)
 
     def render_frame(command_encoder, t):
         t = t % scene.duration
@@ -640,11 +645,29 @@ def hw2_5(args):
                                    1.0)
         )
 
+
+        if camera.transform_keyframes:
+            view = np.linalg.inv(hw2_scene.compose_transformations(interpolate_transformation(camera.transform_keyframes, t)))
+        else:
+            view = np.linalg.inv(camera.cam_to_world)
+
         # Transform the vertices per mesh because each mesh
         # has a different model matrix
         for mesh, offset in zip(scene.meshes, vertex_offsets):
             # HW 2.5 TODO: implement this (basically the same as 2.4)
             MVP = np.zeros((4, 4), dtype=np.float32)
+
+            transforms = interpolate_transformation(mesh.transform_keyframes, t)
+            model = hw2_scene.compose_transformations(transforms)
+
+            # v_prime = view @ model @ v
+            # v_prime = to_screen(v_prime)
+
+
+            # projection[0][0] = 1 / -v_prime[2]
+            # projection[1][1] = 1 / -v_prime[2]
+            MVP = camera_to_screen @ projection @ view @ model
+            # v_prime = MVP @ v
 
 
             transform_vertices_shader.kernel.dispatch(\
