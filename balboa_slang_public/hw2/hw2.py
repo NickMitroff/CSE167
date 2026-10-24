@@ -621,9 +621,9 @@ def hw2_5(args):
     s = camera.s
     projection = np.array([
                 [1, 0, 0, 0],
-                [0, -1, 0, 0],
+                [0, 1, 0, 0],
                 [0, 0, 0, 1],
-                [0, 0, 1, 0]
+                [0, 0, -1, 0]
             ], dtype=np.float32)
     camera_to_screen = np.array([
         [width/(2 * s * a), 0.0, 0.0, width / 2],
@@ -650,6 +650,7 @@ def hw2_5(args):
             view = np.linalg.inv(hw2_scene.compose_transformations(interpolate_transformation(camera.transform_keyframes, t)))
         else:
             view = np.linalg.inv(camera.cam_to_world)
+        
 
         # Transform the vertices per mesh because each mesh
         # has a different model matrix
@@ -662,7 +663,8 @@ def hw2_5(args):
 
             # v_prime = view @ model @ v
             # v_prime = to_screen(v_prime)
-
+            print(t)
+            print(transforms)
 
             # projection[0][0] = 1 / -v_prime[2]
             # projection[1][1] = 1 / -v_prime[2]

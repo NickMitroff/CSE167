@@ -94,7 +94,7 @@ void rasterize_depth(
                     float2(sp0.x, sp0.y), float2(sp1.x, sp1.y), float2(sp2.x, sp2.y), 
                     inv_depth0, inv_depth1, inv_depth2, p);
                     // atomically set depth buffer (see hw page 16)
-                    uint depth_bits = asuint(z[0]);
+                    uint depth_bits = asuint(1 / z[0]);
                     InterlockedMin(depth_buffer[y * width + x], depth_bits);
             }
         }
@@ -170,7 +170,7 @@ void rasterize_id(
                     float2(sp0.x, sp0.y), float2(sp1.x, sp1.y), float2(sp2.x, sp2.y), 
                     inv_depth0, inv_depth1, inv_depth2, p);
                 // atomically set triangle id buffer (see hw page 16)
-                uint depth_bits = asuint(z[0]);
+                uint depth_bits = asuint(1 / z[0]);
                 if (depth_buffer[y * width + x] == depth_bits) {
                     InterlockedMin(triangle_id_buffer[y * width + x], tid);
                 }
