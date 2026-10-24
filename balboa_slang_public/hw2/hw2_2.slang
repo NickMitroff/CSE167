@@ -56,8 +56,8 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
         //// interpolate Z ////
         float4 z = interpolate_barycentric(sp0, sp1, sp2, inv_depth0, inv_depth1, inv_depth2, p);
 
-        if (depth_image[ipixel] > z[0]) {
-            depth_image[ipixel] = z[0];
+        if (depth_image[ipixel] > -z[0]) {
+            depth_image[ipixel] = -z[0];
             float3 c = z[1] * c0 + z[2] * c1 + z[3] * c2;
             color_image[ipixel] = float4(c, 1.0);
         }
