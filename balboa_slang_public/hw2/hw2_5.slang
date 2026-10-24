@@ -198,8 +198,30 @@ void shade(
 
     // HW 2.5 TODO
 
+
     uint face_id = triangle_id_buffer[tid.y * width + tid.x];
     if (face_id != 0xffffffff) {
-        image[tid] = float4(1.0, 0, 0, 1);
+
+        uint v0 = faces[face_id][0];
+        uint v1 = faces[face_id][1];
+        uint v2 = faces[face_id][2];
+
+        float3 sp0 = projected_vertices[v0];
+        float3 sp1 = projected_vertices[v1];
+        float3 sp2 = projected_vertices[v2];
+
+        float inv_depth0 = sp0.z;
+        float inv_depth1 = sp1.z;
+        float inv_depth2 = sp2.z;
+
+        float4 z = interpolate_barycentric(
+            float2(sp0.x, sp0.y), float2(sp1.x, sp1.y), float2(sp2.x, sp2.y),
+            inv_depth0, inv_depth1, inv_depth2, tid);
+
+        float3 c0 = vertex_colors[v0];
+        float3 c1 = vertex_colors[v1];
+        float3 c2 = vertex_colors[v2];
+        float3 c = z[1] * c0 + z[2] * c1 + z[3] * c2;
+        image[tid] = float4(c, 1);
     }
 }
