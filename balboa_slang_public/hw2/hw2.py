@@ -661,15 +661,7 @@ def hw2_5(args):
             transforms = interpolate_transformation(mesh.transform_keyframes, t)
             model = hw2_scene.compose_transformations(transforms)
 
-            # v_prime = view @ model @ v
-            # v_prime = to_screen(v_prime)
-            print(t)
-            print(transforms)
-
-            # projection[0][0] = 1 / -v_prime[2]
-            # projection[1][1] = 1 / -v_prime[2]
             MVP = camera_to_screen @ projection @ view @ model
-            # v_prime = MVP @ v
 
 
             transform_vertices_shader.kernel.dispatch(\
@@ -864,13 +856,18 @@ def hw2_6(args):
         # HW 2.6 TODO: compute the view matrix
         # remember to handle animation if keyframes exist
         view_matrix = np.zeros((4, 4), dtype=np.float32)
+        if camera.transform_keyframes:
+            view_matrix = np.linalg.inv(hw2_scene.compose_transformations(interpolate_transformation(camera.transform_keyframes, t)))
+        else:
+            view_matrix = np.linalg.inv(camera.cam_to_world)
 
         render_pass = command_encoder.begin_render_pass(render_pass_desc)
 
         for mesh, gpu_mesh in zip(scene.meshes, gpu_meshes):
             # HW 2.6 TODO: compute the model matrix
             # remember to handle animation if keyframes exist
-            model_matrix = np.zeros((4, 4), dtype=np.float32)
+            transforms = interpolate_transformation(mesh.transform_keyframes, t)
+            model_matrix = hw2_scene.compose_transformations(transforms)
 
             MVP = clip_projection @ view_matrix @ model_matrix
 

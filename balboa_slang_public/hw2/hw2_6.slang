@@ -1,3 +1,5 @@
+import hw2_2;
+
 StructuredBuffer<float3> vertices;
 StructuredBuffer<float3> vertex_colors;
 uniform float4x4 MVP;
@@ -11,11 +13,15 @@ struct VertexOutput {
 VertexOutput vertex_main(uint vid : SV_VertexID) {
     VertexOutput output;
     // HW 2.6: your code here
+    float4 vertex = float4(vertices[vid], 1.0);
+    vertex = mul(MVP, vertex);
+    output.position = vertex;
+    output.color = vertex_colors[vid];
     return output;
 }
 
 [shader("fragment")]
 float4 fragment_main(VertexOutput input) : SV_Target {
     // HW 2.6: your code here
-    return float4(1.0);
+    return float4(input.color, 1.0);
 }
