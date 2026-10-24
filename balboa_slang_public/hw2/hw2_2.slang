@@ -82,7 +82,7 @@ float4 interpolate_barycentric(float2 sp0, float2 sp1, float2 sp2, float inv_dep
 
         // get area of triangles for barycentric coordinates //
         float area_total = 0.5 * length(cross(float3(p0_p1, 0), float3(p0_p2, 0)));
-        if (area_total < 0.0001) return float.maxValue;
+        if (area_total < 0.0001) return float.minValue;
         float area_b0 = 0.5 * length(cross(float3(p_p1, 0), float3(p_p2, 0)));
         float area_b1 = 0.5 * length(cross(float3(p_p0, 0), float3(p_p2, 0)));
         float area_b2 = 0.5 * length(cross(float3(p_p0, 0), float3(p_p1, 0)));
