@@ -41,7 +41,7 @@ float4 fragment_main(VertexOutput input) : SV_Target {
     // float3 p = float3(input.position.x, input.position.y, input.position.z);
     float3 p = input.world_position;
     float3 l = light_dir;
-    float3 v = normalize(p - camera_position);
+    float3 v = normalize(camera_position - p);
     float3 E = light_color;
 
     // get surface normal
