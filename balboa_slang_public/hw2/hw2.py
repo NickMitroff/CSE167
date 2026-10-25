@@ -400,16 +400,6 @@ def hw2_4(args):
             view = np.linalg.inv(hw2_scene.compose_transformations(interpolate_transformation(camera.transform_keyframes, t)))
         else:
             view = np.linalg.inv(camera.cam_to_world)
-        def to_screen(p):
-                # Homogenous coordinate division happens *here*
-                # since the third coordinate is now our inverse depth
-                x_prime = -(p[0] / p[2])
-                y_prime = -(p[1] / p[2])
-                s = camera.s
-
-                x_screen = width * (x_prime + s * a) / (2 * s * a)
-                y_screen = height - height * (y_prime + s) / (2 * s)
-                return (x_screen, y_screen, -p[2])
         
         screen_vertices_list = []
         inv_depth_list = []
@@ -445,7 +435,13 @@ def hw2_4(args):
                 axis=1
             )
             transforms = interpolate_transformation(mesh.transform_keyframes, t)
-            model = hw2_scene.compose_transformations(transforms)
+            
+            if mesh.transform_keyframes:
+                transforms = interpolate_transformation(mesh.transform_keyframes, t)
+                model = hw2_scene.compose_transformations(transforms)
+            else:
+                model = mesh.model_matrix
+
             scaled_vertices = []
     
             for v in vertices:
@@ -489,8 +485,10 @@ def hw2_4(args):
         )
         for mesh_id in range(len(scene.meshes)):
             mesh = scene.meshes[mesh_id]
-            screen_vertices = screen_vertices_list[mesh_id]
-            inv_depth = inv_depth_list[mesh_id]
+            print(mesh_id)
+            screen_vertices = screen_vertices_list[0]
+            print(screen_vertices)
+            inv_depth = inv_depth_list[0]
             for tri_id in range(mesh.faces.shape[0]):
 
                 sp0 = screen_vertices[mesh.faces[tri_id][0]][0], screen_vertices[mesh.faces[tri_id][0]][1]
@@ -661,10 +659,11 @@ def hw2_5(args):
         for mesh, offset in zip(scene.meshes, vertex_offsets):
             # HW 2.5 TODO: implement this (basically the same as 2.4)
             MVP = np.zeros((4, 4), dtype=np.float32)
-
-            transforms = interpolate_transformation(mesh.transform_keyframes, t)
-            model = hw2_scene.compose_transformations(transforms)
-
+            if mesh.transform_keyframes:
+                transforms = interpolate_transformation(mesh.transform_keyframes, t)
+                model = hw2_scene.compose_transformations(transforms)
+            else:
+                model = mesh.model_matrix
             MVP = camera_to_screen @ projection @ view @ model
 
 
@@ -870,8 +869,11 @@ def hw2_6(args):
         for mesh, gpu_mesh in zip(scene.meshes, gpu_meshes):
             # HW 2.6 TODO: compute the model matrix
             # remember to handle animation if keyframes exist
-            transforms = interpolate_transformation(mesh.transform_keyframes, t)
-            model_matrix = hw2_scene.compose_transformations(transforms)
+            if mesh.transform_keyframes:
+                transforms = interpolate_transformation(mesh.transform_keyframes, t)
+                model_matrix = hw2_scene.compose_transformations(transforms)
+            else:
+                model_matrix = mesh.model_matrix
 
             MVP = clip_projection @ view_matrix @ model_matrix
 
@@ -1070,8 +1072,13 @@ def hw2_7(args):
             # HW 2.7 TODO: compute the model matrix
             # remember to handle animation if keyframes exist
             model_matrix = np.zeros((4, 4), dtype=np.float32)
-            transforms = interpolate_transformation(mesh.transform_keyframes, t)
-            model_matrix = hw2_scene.compose_transformations(transforms)
+
+            
+            if mesh.transform_keyframes:
+                transforms = interpolate_transformation(mesh.transform_keyframes, t)
+                model_matrix = hw2_scene.compose_transformations(transforms)
+            else:
+                model_matrix = mesh.model_matrix
 
 
             normal_matrix = np.linalg.inv(model_matrix[:3, :3]).T
