@@ -90,7 +90,7 @@ def hw2_2(args):
 
         x_2prime = depth_image.width * (x_prime + args.s * a) / (2 * args.s * a)        
         y_2prime = depth_image.height - depth_image.height * (y_prime + args.s) / (2 * args.s)       
-        return (x_2prime, y_2prime, -p[2])
+        return (x_2prime, y_2prime, p[2])
 
     # splat the triangles onto the screen
     screen_vertices = [to_screen(mesh.vertices[vid, :]) for vid in range(mesh.vertices.shape[0])]
@@ -191,17 +191,21 @@ def hw2_3(args):
     depth_image = buffer.create_texture_2d(slang_device, width, height, num_channels=1)
 
     a = width / height
-    def to_screen(p):
-        # Homogenous coordinate division happens *here*
-        # since the third coordinate is now our inverse depth
-        x_prime = -(p[0] / p[2])
-        y_prime = -(p[1] / p[2])
-        s = camera.s
+    s = camera.s
+    projection = np.array([
+                    [1, 0, 0, 0],
+                    [0, 1, 0, 0],
+                    [0, 0, 0, 1],
+                    [0, 0, -1, 0]
+                ], dtype=np.float32)
+    camera_to_screen = np.array([
+        [width/(2 * s * a), 0.0, 0.0, width / 2],
+        [0.0, -height/(2*s), 0.0, height - (height / 2)],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0]
+        ], dtype=np.float32)
 
-        x_screen = width * (x_prime + s * a) / (2 * s * a)
-        y_screen = height - height * (y_prime + s) / (2 * s)
-        return (x_screen, y_screen, -p[2])
-
+    
 
     # view matrix V
     # we want to convert from world to camera space
@@ -227,8 +231,10 @@ def hw2_3(args):
         scaled_vertices = []
 
         for v in vertices:
-            v_prime = view @ model @ v
-            v_prime = to_screen(v_prime)
+            MVP = camera_to_screen @ projection @ view @ model
+            v_prime = MVP @ v
+            # print(f'before projection: {v_prime}')
+            v_prime /= v_prime[3]
             scaled_vertices.append(v_prime)
         scaled_vertices = np.array(scaled_vertices)
 
@@ -408,13 +414,13 @@ def hw2_4(args):
         screen_vertices_list = []
         inv_depth_list = []
 
-        projection = np.array([
-                [1, 0, 0, 0],
-                [0, -1, 0, 0],
-                [0, 0, 0, 1],
-                [0, 0, 1, 0]
-            ], dtype=np.float32)
         s = camera.s
+        projection = np.array([
+                        [1, 0, 0, 0],
+                        [0, 1, 0, 0],
+                        [0, 0, 0, 1],
+                        [0, 0, -1, 0]
+                    ], dtype=np.float32)
         camera_to_screen = np.array([
             [width/(2 * s * a), 0.0, 0.0, width / 2],
             [0.0, -height/(2*s), 0.0, height - (height / 2)],
@@ -467,8 +473,6 @@ def hw2_4(args):
     
         inv_depth_list.append(np.ascontiguousarray(scaled_vertices[:, 2]))
         screen_vertices_list.append(np.ascontiguousarray(scaled_vertices[:, :2]))
-        print(inv_depth_list)
-        print(screen_vertices_list)
         
         # Clear color buffer
         command_encoder.clear_texture_float(
