@@ -1052,6 +1052,16 @@ def hw2_7(args):
 
     Kd_sampler = slang_device.create_sampler()
 
+    # You can uncomment this code to disable interpolation
+    # With interpolation on, my characters will look blurry
+    # since they have low-res textures:
+    
+    Kd_sampler = slang_device.create_sampler(
+        min_filter=spy.TextureFilteringMode.point,
+        mag_filter=spy.TextureFilteringMode.point,
+        mip_filter=spy.TextureFilteringMode.point,
+    )
+
     def render_frame(command_encoder, t):
         t = t % scene.duration
         # HW 2.7 TODO: compute cam_to_world and view matrix

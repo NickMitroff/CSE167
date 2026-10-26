@@ -1,5 +1,5 @@
 # CSE167
- Nick Mitroff & Owen Atis
+Nick Mitroff & Owen Atis
 
 ## Homework 1.9
 We implemented a small SVG parser, located at `hw1/svg_parser/main.py`.
