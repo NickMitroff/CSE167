@@ -33,6 +33,7 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
 
     Sphere closestSphere;
     float tMin = 0;
+    
 
     for (int i = 0; i < num_spheres; i++) {
         Sphere sphere = spheres[i];
@@ -40,13 +41,22 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
         // for this problem, o = (0, 0, 0)
         // we're given a coordinate p,
         // which is where we shoot the ray towards
+        bool ray_intersects_sphere = false;
         float3 d = float3(p, -1);
 
         float3 x_c = sphere.center;
         float r = sphere.radius;
 
         // solve for magnitude(t*d - x_c)^2 = r^2
-        // this is
+        float2 t;
+        float root_2 = d.x * d.x + d.y * d.y + d.z * d.z;
+        float root_1 = -2 * (d.x * x_c.x + d.y * x_c.y + d.z * x_c.z);
+        float root_0 = x_c.x * x_c.x * x_c.y * x_c.y + x_c.z * x_c.z - r * r;
+
+        solve_quadratic(root_2, root_1, root_0, t);
+        
+        
+
 
     }
 }
