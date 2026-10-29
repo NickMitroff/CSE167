@@ -15,24 +15,26 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
 
     image[tid] = float4(background, 1.0);
 
-    // float2 p = float2(tid.x + 0.5, tid.y + 0.5);
-    // // need to convert p to image plane coords
-    // // see hw3 pg. 1 figure 1
-    // float half_width = width / 2;
-    // float half_height = height / 2;
-    // float a = width / height;
+    float2 p = float2(tid.x + 0.5, tid.y + 0.5);
+    // need to convert p to image plane coords
+    // see hw3 pg. 1 figure 1
+    float half_width = width / 2;
+    float half_height = height / 2;
+    float a = width / height;
 
-    // p.x = a * (p.x - half_width) / half_width;
-    // p.y = (p.y - half_height) / half_height;
+    p.x = a * (p.x - half_width) / half_height;
+    p.y = -(p.y - half_height) / half_height;
 
     // lowkey just use the code shown in class:
-    float2 p = 2.0 * (float2(tid) / float2(width, height) - 0.5);
-    p.y *= -1;
+    // float2 p = 2.0 * (float2(tid) / float2(width, height) - 0.5);
+    // p.y *= -1;
     float3 o = float3(0.0, 0.0, 0.0);
     float3 d = normalize(float3(p.x, p.y, -1.0));
 
-    Sphere closestSphere;
-    float tMin = 0;
+    Sphere closest_sphere;
+    bool found_sphere = false;
+    float tMin = float.maxValue;
+    float3 normal;
     
 
     for (int i = 0; i < num_spheres; i++) {
@@ -41,7 +43,6 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
         // for this problem, o = (0, 0, 0)
         // we're given a coordinate p,
         // which is where we shoot the ray towards
-        bool ray_intersects_sphere = false;
         float3 d = float3(p, -1);
 
         float3 x_c = sphere.center;
@@ -49,14 +50,30 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
 
         // solve for magnitude(t*d - x_c)^2 = r^2
         float2 t;
+        float t_intersect = float.maxValue;
         float root_2 = d.x * d.x + d.y * d.y + d.z * d.z;
         float root_1 = -2 * (d.x * x_c.x + d.y * x_c.y + d.z * x_c.z);
         float root_0 = x_c.x * x_c.x * x_c.y * x_c.y + x_c.z * x_c.z - r * r;
 
-        solve_quadratic(root_2, root_1, root_0, t);
-        
-        
+        // 0 solutions: the ray doesn't intersect the sphere
+        if (!solve_quadratic(root_2, root_1, root_0, t)) continue;
 
+        // pick the smallest positive value of t
+        if (t.x > 0 && t.x < t.y) t_intersect = t.x;
+        else if (t.y > 0 && t.y < t.x) t_intersect = t.y;
 
+        if (t_intersect < tMin) {
+            tMin = t_intersect;
+            closest_sphere = sphere;
+            normal = tMin * d - sphere.center;
+            found_sphere = true;
+        }
     }
+
+    if (found_sphere) {
+        float3 normal_color = (normalize(normal) + 1) / 2;
+        image[tid] = float4(normal_color, 1);
+    }
+
+
 }
