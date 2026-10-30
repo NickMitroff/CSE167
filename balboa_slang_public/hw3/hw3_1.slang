@@ -25,9 +25,6 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
     p.x = a * (p.x - half_width) / half_height;
     p.y = -(p.y - half_height) / half_height;
 
-    // lowkey just use the code shown in class:
-    // float2 p = 2.0 * (float2(tid) / float2(width, height) - 0.5);
-    // p.y *= -1;
     float3 o = float3(0.0, 0.0, 0.0);
     float3 d = normalize(float3(p.x, p.y, -1.0));
 
@@ -35,15 +32,14 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
     bool found_sphere = false;
     float tMin = float.maxValue;
     float3 normal;
-    
 
+    
     for (int i = 0; i < num_spheres; i++) {
         Sphere sphere = spheres[i];
         // test ray intersection with sphere
         // for this problem, o = (0, 0, 0)
         // we're given a coordinate p,
         // which is where we shoot the ray towards
-        float3 d = float3(p, -1);
 
         float3 x_c = sphere.center;
         float r = sphere.radius;
@@ -53,7 +49,7 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
         float t_intersect = float.maxValue;
         float coeff_2 = d.x * d.x + d.y * d.y + d.z * d.z;
         float coeff_1 = -2 * (d.x * x_c.x + d.y * x_c.y + d.z * x_c.z);
-        float coeff_0 = x_c.x * x_c.x * x_c.y * x_c.y + x_c.z * x_c.z - r * r;
+        float coeff_0 = x_c.x * x_c.x + x_c.y * x_c.y + x_c.z * x_c.z - r * r;
 
         // 0 solutions: the ray doesn't intersect the sphere
         if (!solve_quadratic(coeff_2, coeff_1, coeff_0, t)) continue;
