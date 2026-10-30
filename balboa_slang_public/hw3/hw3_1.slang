@@ -28,12 +28,28 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
     float3 o = float3(0.0, 0.0, 0.0);
     float3 d = normalize(float3(p.x, p.y, -1.0));
 
-    Sphere closest_sphere;
     bool found_sphere = false;
-    float tMin = float.maxValue;
+    float t_min = float.maxValue;
     float3 normal;
+    int sphere_index;
 
-    
+    found_sphere = ray_intersects_sphere(num_spheres, spheres, d, o, t_min, normal, sphere_index);
+
+    if (found_sphere) {
+        float3 normal_color = (normalize(normal) + 1) / 2;
+        image[tid] = float4(normal_color, 1);
+    }
+
+
+}
+
+bool ray_intersects_sphere(int num_spheres, StructuredBuffer<Sphere> spheres,
+        float3 d, float3 o, out float t_min, out float3 normal, out int sphere_index) {
+    bool found_sphere = false;
+    t_min = float.maxValue;
+    normal = float3(1);
+    sphere_index = -1;
+
     for (int i = 0; i < num_spheres; i++) {
         Sphere sphere = spheres[i];
         // test ray intersection with sphere
@@ -58,18 +74,12 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
         if (t.x > 0 && (t.x < t.y || t.y < 0)) t_intersect = t.x;
         else if (t.y > 0 && (t.y < t.x || t.x < 0)) t_intersect = t.y;
 
-        if (t_intersect < tMin) {
-            tMin = t_intersect;
-            closest_sphere = sphere;
-            normal = tMin * d - sphere.center;
+        if (t_intersect < t_min) {
+            t_min = t_intersect;
+            sphere_index = i;
+            normal = t_min * d - sphere.center;
             found_sphere = true;
         }
     }
-
-    if (found_sphere) {
-        float3 normal_color = (normalize(normal) + 1) / 2;
-        image[tid] = float4(normal_color, 1);
-    }
-
-
+    return found_sphere;
 }
