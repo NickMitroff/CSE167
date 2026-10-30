@@ -51,16 +51,16 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
         // solve for magnitude(t*d - x_c)^2 = r^2
         float2 t;
         float t_intersect = float.maxValue;
-        float root_2 = d.x * d.x + d.y * d.y + d.z * d.z;
-        float root_1 = -2 * (d.x * x_c.x + d.y * x_c.y + d.z * x_c.z);
-        float root_0 = x_c.x * x_c.x * x_c.y * x_c.y + x_c.z * x_c.z - r * r;
+        float coeff_2 = d.x * d.x + d.y * d.y + d.z * d.z;
+        float coeff_1 = -2 * (d.x * x_c.x + d.y * x_c.y + d.z * x_c.z);
+        float coeff_0 = x_c.x * x_c.x * x_c.y * x_c.y + x_c.z * x_c.z - r * r;
 
         // 0 solutions: the ray doesn't intersect the sphere
-        if (!solve_quadratic(root_2, root_1, root_0, t)) continue;
+        if (!solve_quadratic(coeff_2, coeff_1, coeff_0, t)) continue;
 
         // pick the smallest positive value of t
-        if (t.x > 0 && t.x < t.y) t_intersect = t.x;
-        else if (t.y > 0 && t.y < t.x) t_intersect = t.y;
+        if (t.x > 0 && (t.x < t.y || t.y < 0)) t_intersect = t.x;
+        else if (t.y > 0 && (t.y < t.x || t.x < 0)) t_intersect = t.y;
 
         if (t_intersect < tMin) {
             tMin = t_intersect;
