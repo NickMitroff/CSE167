@@ -79,7 +79,7 @@ bool ray_intersects_sphere(int count, StructuredBuffer<Sphere> spheres,
         if (t_intersect < t_min) {
             t_min = t_intersect;
             sphere_index = i;
-            normal = t_min * d - sphere.center;
+            normal = o + t_min * d - sphere.center;
             found_sphere = true;
         }
     }
@@ -123,7 +123,7 @@ bool ray_intersects_sphere_shape(int count, StructuredBuffer<Shape> shapes, Stru
         if (t_intersect < t_min) {
             t_min = t_intersect;
             shape_index = i;
-            normal = t_min * d - sphere.center;
+            normal = o + t_min * d - sphere.center;
             found_sphere = true;
         }
     }
