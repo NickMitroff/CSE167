@@ -43,14 +43,14 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
 
 }
 
-bool ray_intersects_sphere(int num_spheres, StructuredBuffer<Sphere> spheres,
+bool ray_intersects_sphere(int count, StructuredBuffer<Sphere> spheres,
         float3 d, float3 o, out float t_min, out float3 normal, out int sphere_index) {
     bool found_sphere = false;
     t_min = float.maxValue;
     normal = float3(1);
     sphere_index = -1;
 
-    for (int i = 0; i < num_spheres; i++) {
+    for (int i = 0; i < count; i++) {
         Sphere sphere = spheres[i];
         // test ray intersection with sphere
         // for this problem, o = (0, 0, 0)
@@ -64,8 +64,10 @@ bool ray_intersects_sphere(int num_spheres, StructuredBuffer<Sphere> spheres,
         float2 t;
         float t_intersect = float.maxValue;
         float coeff_2 = d.x * d.x + d.y * d.y + d.z * d.z;
-        float coeff_1 = -2 * (d.x * x_c.x + d.y * x_c.y + d.z * x_c.z);
-        float coeff_0 = x_c.x * x_c.x + x_c.y * x_c.y + x_c.z * x_c.z - r * r;
+        float coeff_1 = -2 * (d.x * x_c.x + d.y * x_c.y + d.z * x_c.z)
+            + 2 * dot(o, d);
+        float coeff_0 = x_c.x * x_c.x + x_c.y * x_c.y + x_c.z * x_c.z - r * r
+            + dot(o, o) - 2 * dot(o, x_c);
 
         // 0 solutions: the ray doesn't intersect the sphere
         if (!solve_quadratic(coeff_2, coeff_1, coeff_0, t)) continue;
@@ -77,6 +79,50 @@ bool ray_intersects_sphere(int num_spheres, StructuredBuffer<Sphere> spheres,
         if (t_intersect < t_min) {
             t_min = t_intersect;
             sphere_index = i;
+            normal = t_min * d - sphere.center;
+            found_sphere = true;
+        }
+    }
+    return found_sphere;
+}
+
+bool ray_intersects_sphere_shape(int count, StructuredBuffer<Shape> shapes, StructuredBuffer<Sphere> spheres,
+        float3 d, float3 o, out float t_min, out float3 normal, out int shape_index) {
+    bool found_sphere = false;
+    t_min = float.maxValue;
+    normal = float3(1);
+    shape_index = -1;
+
+    for (int i = 0; i < count; i++) {
+        Shape shape = shapes[i];
+        Sphere sphere = spheres[shape.index];
+        // test ray intersection with sphere
+        // for this problem, o = (0, 0, 0)
+        // we're given a coordinate p,
+        // which is where we shoot the ray towards
+
+        float3 x_c = sphere.center;
+        float r = sphere.radius;
+
+        // solve for magnitude(o + t*d - x_c)^2 = r^2
+        float2 t;
+        float t_intersect = float.maxValue;
+        float coeff_2 = d.x * d.x + d.y * d.y + d.z * d.z;
+        float coeff_1 = -2 * (d.x * x_c.x + d.y * x_c.y + d.z * x_c.z)
+            + 2 * dot(o, d);
+        float coeff_0 = x_c.x * x_c.x + x_c.y * x_c.y + x_c.z * x_c.z - r * r
+            + dot(o, o) - 2 * dot(o, x_c);
+
+        // 0 solutions: the ray doesn't intersect the sphere
+        if (!solve_quadratic(coeff_2, coeff_1, coeff_0, t)) continue;
+
+        // pick the smallest positive value of t
+        if (t.x > 0 && (t.x < t.y || t.y < 0)) t_intersect = t.x;
+        else if (t.y > 0 && (t.y < t.x || t.x < 0)) t_intersect = t.y;
+
+        if (t_intersect < t_min) {
+            t_min = t_intersect;
+            shape_index = i;
             normal = t_min * d - sphere.center;
             found_sphere = true;
         }
