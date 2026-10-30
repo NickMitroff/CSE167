@@ -1,5 +1,5 @@
 import hw3_common;
-import hw3_1; 
+import hw3_1;
 
 [shader("compute")]
 [numthreads(8, 8, 1)]
@@ -17,6 +17,8 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
         return;
     }
 
+    image[tid] = float4(background, 1.0);
+
     float2 p = float2(tid.x + 0.5, tid.y + 0.5);
     // need to convert p to image plane coords
     // see hw3 pg. 1 figure 1
@@ -27,13 +29,39 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
     p.x = a * (p.x - half_width) / half_height;
     p.y = -(p.y - half_height) / half_height;
 
-    // lowkey just use the code shown in class:
-    // float2 p = 2.0 * (float2(tid) / float2(width, height) - 0.5);
-    // p.y *= -1;
     float3 o = float3(0.0, 0.0, 0.0);
     float3 d = normalize(float3(p.x, p.y, -1.0));
 
-    
+    bool found_sphere = false;
+    float t_min = float.maxValue;
+    float3 normal;
+    int shape_index;
 
-    image[tid] = float4(background, 1.0);
+    found_sphere = ray_intersects_sphere_shape(num_shapes, shapes, spheres, d, o, t_min, normal, shape_index);
+
+    if (found_sphere) {
+        // float3 color = shapes[shape_index].Kd;
+        float3 color = float3(0);
+        float3 sphere_pos = o + t_min * d;
+        // do lighting
+        for (int i = 0; i < num_lights; i++) {
+            PointLight light = lights[i];
+            float3 d_light = normalize(sphere_pos - light.position);
+
+            float t_min_light = float.maxValue;
+            float3 normal_light = float.maxValue;
+            int shape_index_light = -1;
+            bool light_hit_sphere = ray_intersects_sphere_shape(num_shapes, shapes, spheres, d_light, light.position,
+                                                                t_min_light, normal_light, shape_index_light);
+            if (light_hit_sphere && t_min > EPSILON && shape_index == shape_index_light) {
+                float3 light_color = light.intensity / (t_min_light * t_min_light);
+                float3 Kd = shapes[shape_index].Kd;
+
+                // reflectance = Kdmax(n dot l, 0)
+                color += Kd * light_color * max(dot(normalize(normal), -d_light), 0);
+            }
+        }
+
+        image[tid] = float4(color, 1);
+    }
 }
