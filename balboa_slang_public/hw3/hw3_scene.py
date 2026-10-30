@@ -53,6 +53,54 @@ def interpolate_transformation(transform_keyframes, t):
 
     # create a new transform from the two keyframes
     interp_transforms = []
+    def interpolate(w, x0, x1):
+        return (1 - w)*x0 + w*x1
+    
+    k0 = None
+    k1 = None
+    if len(transform_keyframes) == 0:
+            return []
+    for keyframe in range(len(transform_keyframes) - 1):
+        k0 = transform_keyframes[keyframe]
+        k1 = transform_keyframes[keyframe+1]
+        if(t > k0["time"] and t < k1["time"]):
+            break
+    
+    w = (t-k0["time"])/(k1["time"]-k0["time"])
+    tfArray = k0["transform"]
+    for idx in range(len(tfArray)):
+        if "rotate_x" in tfArray[idx]:
+            interp_transforms.append({"rotate_x": [interpolate(w,k0["transform"][idx]["rotate_x"][0], 
+                                                        k1["transform"][idx]["rotate_x"][0])]})
+        if "rotate_y" in tfArray[idx]:
+            interp_transforms.append({"rotate_y": [interpolate(w,k0["transform"][idx]["rotate_y"][0], 
+                                                        k1["transform"][idx]["rotate_y"][0])]})
+        if "rotate_z" in tfArray[idx]:
+            interp_transforms.append({"rotate_z": [interpolate(w,k0["transform"][idx]["rotate_z"][0], 
+                                                        k1["transform"][idx]["rotate_z"][0])]})
+        if "lookat" in tfArray[idx]:
+            #TODO: implement this (it has to interpolate position, target, and up dir)
+            lookat_0 = k0["transform"][idx]["lookat"]
+            lookat_1 = k1["transform"][idx]["lookat"]
+            interp_transforms.append({"lookat": {
+                "position": [interpolate(w,lookat_0["position"][0],lookat_1["position"][0]),
+                                interpolate(w,lookat_0["position"][1],lookat_1["position"][1]),
+                                interpolate(w,lookat_0["position"][2],lookat_1["position"][2])],
+                "target": [interpolate(w,lookat_0["target"][0],lookat_1["target"][0]),
+                                interpolate(w,lookat_0["target"][1],lookat_1["target"][1]),
+                                interpolate(w,lookat_0["target"][2],lookat_1["target"][2])],
+                "up": [interpolate(w,lookat_0["up"][0],lookat_1["up"][0]),
+                        interpolate(w,lookat_0["up"][1],lookat_1["up"][1]),
+                        interpolate(w,lookat_0["up"][2],lookat_1["up"][2])]}})
+
+        if "scale" in tfArray[idx]:
+            interp_transforms.append({"scale": [interpolate(w,k0["transform"][idx]["scale"][0], k1["transform"][idx]["scale"][0]),
+                                            interpolate(w,k0["transform"][idx]["scale"][1], k1["transform"][idx]["scale"][1]),
+                                            interpolate(w,k0["transform"][idx]["scale"][2], k1["transform"][idx]["scale"][2])]})
+        if "translate" in tfArray[idx]:
+            interp_transforms.append({"translate": [interpolate(w,k0["transform"][idx]["translate"][0], k1["transform"][idx]["translate"][0]),
+                                            interpolate(w,k0["transform"][idx]["translate"][1], k1["transform"][idx]["translate"][1]),
+                                            interpolate(w,k0["transform"][idx]["translate"][2], k1["transform"][idx]["translate"][2])]})
     return interp_transforms
 
 def get_transformation(obj, t):
