@@ -15,14 +15,14 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
 
     image[tid] = float4(background, 1.0);
 
-    float2 p = float2(tid.x + 0.5, tid.y + 0.5);
     // need to convert p to image plane coords
     // see hw3 pg. 1 figure 1
-    float half_width = width / 2;
-    float half_height = height / 2;
-    float a = width / height;
+    float2 p = float2(tid.x + 0.5, tid.y + 0.5);
+    float half_width = float(width) / 2;
+    float half_height = float(height) / 2;
+    float a = float(width) / float(height);
 
-    p.x = a * (p.x - half_width) / half_height;
+    p.x = a * (p.x - half_width) / half_width;
     p.y = -(p.y - half_height) / half_height;
 
     float3 o = float3(0.0, 0.0, 0.0);
@@ -79,7 +79,7 @@ bool ray_intersects_sphere(int count, StructuredBuffer<Sphere> spheres,
         if (t_intersect < t_min) {
             t_min = t_intersect;
             sphere_index = i;
-            normal = o + t_min * d - sphere.center;
+            normal = normalize(o + t_min * d - sphere.center);
             found_sphere = true;
         }
     }
@@ -117,13 +117,15 @@ bool ray_intersects_sphere_shape(int count, StructuredBuffer<Shape> shapes, Stru
         if (!solve_quadratic(coeff_2, coeff_1, coeff_0, t)) continue;
 
         // pick the smallest positive value of t
-        if (t.x > 0 && (t.x < t.y || t.y < 0)) t_intersect = t.x;
-        else if (t.y > 0 && (t.y < t.x || t.x < 0)) t_intersect = t.y;
+        // for problems 3.2 onwards, compare with EPSILON instead of 0
+        // to prevent pixels from being skipped
+        if (t.x > EPSILON && (t.x < t.y || t.y < EPSILON)) t_intersect = t.x;
+        else if (t.y > EPSILON && (t.y < t.x || t.x < EPSILON)) t_intersect = t.y;
 
         if (t_intersect < t_min) {
             t_min = t_intersect;
             shape_index = i;
-            normal = o + t_min * d - sphere.center;
+            normal = normalize(o + t_min * d - sphere.center);
             found_sphere = true;
         }
     }

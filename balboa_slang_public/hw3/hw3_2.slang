@@ -17,7 +17,6 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
         return;
     }
 
-    image[tid] = float4(background, 1.0);
 
     float2 p = float2(tid.x + 0.5, tid.y + 0.5);
     // need to convert p to image plane coords
@@ -41,27 +40,37 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
 
     if (found_sphere) {
         // float3 color = shapes[shape_index].Kd;
-        float3 color = float3(0);
         float3 sphere_pos = o + t_min * d;
-        // do lighting
-        for (int i = 0; i < num_lights; i++) {
-            PointLight light = lights[i];
-            float3 d_light = normalize(sphere_pos - light.position);
-
-            float t_min_light = float.maxValue;
-            float3 normal_light = float.maxValue;
-            int shape_index_light = -1;
-            bool light_hit_sphere = ray_intersects_sphere_shape(num_shapes, shapes, spheres, d_light, light.position,
-                                                                t_min_light, normal_light, shape_index_light);
-            if (light_hit_sphere && t_min > EPSILON && shape_index == shape_index_light) {
-                float3 light_color = light.intensity / (t_min_light * t_min_light);
-                float3 Kd = shapes[shape_index].Kd;
-
-                // reflectance = Kdmax(n dot l, 0)
-                color += Kd * light_color * max(dot(normalize(normal), -d_light), 0);
-            }
-        }
-
+        float3 color = get_color_on_sphere(sphere_pos, lights, num_lights, shapes, num_shapes, spheres,
+                                           t_min, shape_index, normal);
         image[tid] = float4(color, 1);
     }
+    else {
+        image[tid] = float4(background, 1.0);
+    }
+}
+
+float3 get_color_on_sphere(float3 sphere_pos, StructuredBuffer<PointLight> lights, int num_lights, StructuredBuffer<Shape> shapes,
+                           uniform int num_shapes,
+                           StructuredBuffer<Sphere> spheres, float t_min, int shape_index, float3 normal) {
+    float3 color = float3(0);
+    // do lighting
+    for (int i = 0; i < num_lights; i++) {
+        PointLight light = lights[i];
+        float3 d_light = normalize(sphere_pos - light.position);
+
+        float t_min_light = float.maxValue;
+        float3 normal_light = float.maxValue;
+        int shape_index_light = -1;
+        bool light_hit_sphere = ray_intersects_sphere_shape(num_shapes, shapes, spheres, d_light, light.position,
+                                                            t_min_light, normal_light, shape_index_light);
+        if (light_hit_sphere && t_min > EPSILON && shape_index == shape_index_light) {
+            float3 light_color = light.intensity / (t_min_light * t_min_light);
+            float3 Kd = shapes[shape_index].Kd;
+
+            // reflectance = Kdmax(n dot l, 0)
+            color += Kd * light_color * max(dot(normal, -d_light), 0);
+        }
+    }
+    return color;
 }
