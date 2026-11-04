@@ -23,13 +23,11 @@ void compute_main(uint2 tid: SV_DispatchThreadID,
 
 
     float2 p = float2(tid.x + 0.5, tid.y + 0.5);
-    // need to convert p to image plane coords
-    // see hw3 pg. 1 figure 1
-    float half_width = width / 2;
-    float half_height = height / 2;
-    float a = width / height;
+    float half_width = float(width) / 2;
+    float half_height = float(height) / 2;
+    float a = float(width) / float(height);
 
-    p.x = a * (p.x - half_width) / half_height;
+    p.x = a * (p.x - half_width) / half_width;
     p.y = -(p.y - half_height) / half_height;
 
     float3 o = float3(0.0, 0.0, 0.0);
