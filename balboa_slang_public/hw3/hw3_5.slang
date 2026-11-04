@@ -145,7 +145,7 @@ bool ray_intersects_shape(uniform int num_shapes, StructuredBuffer<Shape> shapes
                 float3 p1 = vertices[tri.y];
                 float3 p2 = vertices[tri.z];
 
-                if (intersect_tri(p0, p1, p2, o_t, d_t, EPSILON, float.maxValue, b, t)) continue;
+                if (!intersect_tri(p0, p1, p2, o_t, d_t, EPSILON, float.maxValue, b, t)) continue;
                 else t_intersect = t;
 
                 if (t_intersect < t_min) {
