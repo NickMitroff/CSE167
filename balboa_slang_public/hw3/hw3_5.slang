@@ -61,7 +61,7 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
                                               vertices,
                                               vertex_normals,
                                               triangles,
-                                                shape_index, normal);
+                                              shape_index, normal);
         }
         else contribution = background;
 
@@ -145,17 +145,27 @@ bool ray_intersects_shape(uniform int num_shapes, StructuredBuffer<Shape> shapes
                 float3 p1 = vertices[tri.y];
                 float3 p2 = vertices[tri.z];
 
-                if (intersect_tri(p0, p1, p2, o_t, d_t, EPSILON, float.maxValue, b, t)) continue;
+                if (!intersect_tri(p0, p1, p2, o_t, d_t, EPSILON, float.maxValue, b, t)) continue;
                 else t_intersect = t;
 
                 if (t_intersect < t_min) {
                     t_min = t_intersect;
                     shape_index = i;
                     // normal = normalize(o_t + t_min * d_t - sphere.center);
-                    // float3x3 world_to_obj_3x3 = float3x3(shape.world_to_obj);
-                    // normal = normalize(mul(transpose(world_to_obj_3x3), normal));
                     // TODO: figure out how to actually get tri normal
-                    normal = normalize(float3(1));
+
+                    // get edges, then take cross product of edges to get normals
+                    float3 e01 = p1 - p0;
+                    float3 e02 = p2 - p0;
+                    float3 e12 = p2 - p1;
+                    
+                    float3 n0 = normalize(cross(e01, e02));
+                    float3 n1 = normalize(cross(e01, e12));
+                    float3 n2 = normalize(cross(e02, e12));
+
+                    normal = normalize((1 - b[1] - b[2]) * n0 + b[1] * n1 + b[2] * n2);
+                    float3x3 world_to_obj_3x3 = float3x3(shape.world_to_obj);
+                    normal = normalize(mul(transpose(world_to_obj_3x3), normal));
                     found_shape = true;
                     hit_pos = xform_pt(shape.obj_to_world, o_t + t_min * d_t);
                 }
