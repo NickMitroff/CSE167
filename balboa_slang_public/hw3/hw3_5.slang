@@ -1,5 +1,4 @@
 import hw3_common;
-import hw3_4;
 
 [shader("compute")]
 [numthreads(8, 8, 1)]
