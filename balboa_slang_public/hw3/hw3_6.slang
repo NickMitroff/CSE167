@@ -225,7 +225,7 @@ float3 get_color_on_shape_bvh(float3 hit_pos, StructuredBuffer<PointLight> light
                                                         triangles,
                                                         bvh_nodes,
                                                         d_light, light.position, t_min_light, normal_light, shape_index_light, light_hit_pos);
-        if (light_hit_shape && dot(light_hit_pos - hit_pos, light_hit_pos - hit_pos) < EPSILON) {
+        if (light_hit_shape && dot(light_hit_pos - hit_pos, light_hit_pos - hit_pos) < EPSILON * EPSILON) {
             float3 light_color = light.intensity / (t_min_light * t_min_light);
             float3 Kd = shapes[shape_index].Kd;
 

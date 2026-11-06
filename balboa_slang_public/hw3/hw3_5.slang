@@ -201,8 +201,9 @@ float3 get_color_on_shape(float3 hit_pos, StructuredBuffer<PointLight> lights, i
                                                     d_light, light.position, t_min_light, normal_light, shape_index_light, light_hit_pos);
         // new in 3.5: shapes can be triangle meshes, which have many triangles,
         // so shape_index isn't enough to distinguish them
-        // instead do this position-based check
-        if (light_hit_shape && dot(light_hit_pos - hit_pos, light_hit_pos - hit_pos) < EPSILON) {
+        // instead compare the positions of the camera ray intersection
+        // and the light ray intersection
+        if (light_hit_shape && dot(light_hit_pos - hit_pos, light_hit_pos - hit_pos) < EPSILON * EPSILON) {
             float3 light_color = light.intensity / (t_min_light * t_min_light);
             float3 Kd = shapes[shape_index].Kd;
 
