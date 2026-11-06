@@ -177,13 +177,10 @@ bool ray_intersects_shape_bvh(uniform int num_shapes, StructuredBuffer<Shape> sh
 
                             // Compute the triangle normal, then transform it
                             // from object space to world space.
-                            float3 e01 = p1 - p0;
-                            float3 e02 = p2 - p0;
-                            float3 e12 = p2 - p1;
-
-                            float3 n0 = normalize(cross(e01, e02));
-                            float3 n1 = normalize(cross(e01, e12));
-                            float3 n2 = normalize(cross(e02, e12));
+                            // We can get the normal vectors from the buffer given to us
+                            float3 n0 = vertex_normals[tri.x];
+                            float3 n1 = vertex_normals[tri.y];
+                            float3 n2 = vertex_normals[tri.z];
 
                             normal = normalize((1 - b[1] - b[2]) * n0 + b[1] * n1 + b[2] * n2);
                             float3x3 world_to_obj_3x3 = float3x3(shape.world_to_obj);
