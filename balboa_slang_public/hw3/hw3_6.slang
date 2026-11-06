@@ -139,67 +139,61 @@ bool ray_intersects_shape_bvh(uniform int num_shapes, StructuredBuffer<Shape> sh
 
             // new in 3.6: instead of looping through each triangle in mesh,
             // use the BVH to find relevant triangles
-            int safety = 0;
             int bvh_index = mesh.bvh_root_index;
-            // "end index" is the skip pointer of the root node
+            // the root's skip pointer is set to the "end" of the flattened BVH array
             int end_index = bvh_nodes[bvh_index].next_index;
             BVHNode cur_node;
-            bool found_aabb = false;
-            while (true) {
-                safety++;
-                if (safety > 100) break;
+            while (bvh_index < end_index) {
                 cur_node = bvh_nodes[bvh_index];
-                bool intersects = false;
-                intersects = intersect_aabb(cur_node.bbox_min, cur_node.bbox_max, o_t, d_t, EPSILON, float.maxValue);
-                // if we hit, increment array position by 1
-                // unless its a leaf, in which case use that leaf
-                // if we don't hit, go the skip pointer
-                // if we don't hit AND we're on a leaf, exit without having found aabb
-                if (intersects && cur_node.is_leaf) {
-                    found_aabb = true;
-                    break;
-                }
-                else if (!intersects) {
+                bool intersects = intersect_aabb(cur_node.bbox_min, cur_node.bbox_max,
+                                                 o_t, d_t, EPSILON, t_min);
+
+                if (!intersects) {
+                    // if we don't intersect, go to the node designated by this node's skip pointer
                     bvh_index = cur_node.next_index;
-                    if (bvh_index == end_index) break;
+                    continue;
                 }
-                bvh_index++;
-                
-            }
+                // if we do intersect, move forward 1 index in the flattened DFS order
+                else bvh_index++;
 
-            if (!found_aabb) continue;
-            for (int j = cur_node.triangle_begin; j < cur_node.triangle_end; j++) {
-                uint3 tri = triangles[j] + mesh.vertex_offset;
+                // if we hit a leaf node, it has triangles which we can check for intersection with
+                // note that one ray can hit multiple leaf nodes,
+                // which is why we don't exit early even if we hit a leaf node
+                if (cur_node.is_leaf) {
+                    for (int j = cur_node.triangle_begin; j < cur_node.triangle_end; j++) {
+                        uint3 tri = triangles[j] + mesh.vertex_offset;
 
-                // get vertices
-                float3 p0 = vertices[tri.x];
-                float3 p1 = vertices[tri.y];
-                float3 p2 = vertices[tri.z];
+                        // get vertices
+                        float3 p0 = vertices[tri.x];
+                        float3 p1 = vertices[tri.y];
+                        float3 p2 = vertices[tri.z];
 
-                if (!intersect_tri(p0, p1, p2, o_t, d_t, EPSILON, float.maxValue, b, t)) continue;
-                else t_intersect = t;
+                        if (!intersect_tri(p0, p1, p2, o_t, d_t, EPSILON, t_min, b, t)) continue;
+                        t_intersect = t;
 
-                if (t_intersect < t_min) {
-                    t_min = t_intersect;
-                    shape_index = i;
-                    // normal = normalize(o_t + t_min * d_t - sphere.center);
-                    // TODO: figure out how to actually get tri normal
+                        if (t_intersect < t_min) {
+                            t_min = t_intersect;
+                            shape_index = i;
 
-                    // get edges, then take cross product of edges to get normals
-                    float3 e01 = p1 - p0;
-                    float3 e02 = p2 - p0;
-                    float3 e12 = p2 - p1;
+                            // Compute the triangle normal, then transform it
+                            // from object space to world space.
+                            float3 e01 = p1 - p0;
+                            float3 e02 = p2 - p0;
+                            float3 e12 = p2 - p1;
 
-                    float3 n0 = normalize(cross(e01, e02));
-                    float3 n1 = normalize(cross(e01, e12));
-                    float3 n2 = normalize(cross(e02, e12));
+                            float3 n0 = normalize(cross(e01, e02));
+                            float3 n1 = normalize(cross(e01, e12));
+                            float3 n2 = normalize(cross(e02, e12));
 
-                    normal = normalize((1 - b[1] - b[2]) * n0 + b[1] * n1 + b[2] * n2);
-                    float3x3 world_to_obj_3x3 = float3x3(shape.world_to_obj);
-                    normal = normalize(mul(transpose(world_to_obj_3x3), normal));
-                    found_shape = true;
-                    hit_pos = xform_pt(shape.obj_to_world, o_t + t_min * d_t);
+                            normal = normalize((1 - b[1] - b[2]) * n0 + b[1] * n1 + b[2] * n2);
+                            float3x3 world_to_obj_3x3 = float3x3(shape.world_to_obj);
+                            normal = normalize(mul(transpose(world_to_obj_3x3), normal));
+                            found_shape = true;
+                            hit_pos = xform_pt(shape.obj_to_world, o_t + t_min * d_t);
+                        }
+                    }
                 }
+
             }
         }
     }
