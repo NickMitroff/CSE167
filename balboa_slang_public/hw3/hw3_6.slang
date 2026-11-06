@@ -69,10 +69,10 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
         color += throughput * contribution;
         if (found_shape) {
             d = d - 2 * (dot(d, normal) * normal);
-            float normal_side = dot(d, normal) >= 0.0 ? 1.0 : -1.0;
-            o = hit_pos + normal_side * EPSILON * normal;
+            o = hit_pos;
 
             throughput *= shapes[shape_index].Kr;
+            if (throughput.x + throughput.y + throughput.z <= 0) break;
         }
         else break;
     }
@@ -219,13 +219,13 @@ float3 get_color_on_shape_bvh(float3 hit_pos, StructuredBuffer<PointLight> light
         int shape_index_light = -1;
         float3 light_hit_pos;
         bool light_hit_shape = ray_intersects_shape_bvh(num_shapes, shapes, spheres,
-                                                    meshes,
-                                                    vertices,
-                                                    vertex_normals,
-                                                    triangles,
-                                                    bvh_nodes,
-                                                    d_light, light.position, t_min_light, normal_light, shape_index_light, light_hit_pos);
-        if (light_hit_shape && shape_index == shape_index_light) {
+                                                        meshes,
+                                                        vertices,
+                                                        vertex_normals,
+                                                        triangles,
+                                                        bvh_nodes,
+                                                        d_light, light.position, t_min_light, normal_light, shape_index_light, light_hit_pos);
+        if (light_hit_shape && dot(light_hit_pos - hit_pos, light_hit_pos - hit_pos) < EPSILON) {
             float3 light_color = light.intensity / (t_min_light * t_min_light);
             float3 Kd = shapes[shape_index].Kd;
 
