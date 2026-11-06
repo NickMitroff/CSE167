@@ -129,7 +129,10 @@ bool intersect_tri(float3 p0, float3 p1, float3 p2,
     float v = dot(ray_dir, s2) * inv_divisor;
     t = dot(e2, s2) * inv_divisor;
 
-    if (t > t_min && t < t_max && u >= 0 && v >= 0 && u + v <= 1) {
+    // like with sphere intersection, we want to allow an EPSILON's worth of 
+    // leniency to account for floating point loss of precision
+    // this fixes an issue with dead pixels when rendering the two_quads scene
+    if (t > t_min && t < t_max && u >= -EPSILON && v >= -EPSILON && u + v <= 1) {
         b.x = 1 - u - v;
         b.y = u;
         b.z = v;
