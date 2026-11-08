@@ -49,11 +49,8 @@ void compute_main(uint2 tid: SV_DispatchThreadID,
             found_any_sphere = true;
             sphere_pos = o + t_min * d;
             float3 hit_sphere_normal = float3(0.0);
-            float4x4 I = shapes[shape_index].world_to_obj;
-            float3x3 inv_3x3 = float3x3(I);
-            float3x3 N = transpose(float3x3(inv_3x3));
             contribution = get_color_on_sphere(sphere_pos, lights, num_lights, shapes, num_shapes, spheres,
-                                               t_min, shape_index, float3(1));
+                                               t_min, shape_index, normal);
         }
         else contribution = background;
 
