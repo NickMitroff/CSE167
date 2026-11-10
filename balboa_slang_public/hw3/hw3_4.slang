@@ -63,8 +63,7 @@ void compute_main(uint2 tid : SV_DispatchThreadID,
         color += throughput * contribution;
         if (found_sphere) {
             d = d - 2 * (dot(d, normal) * normal);
-            float normal_side = dot(d, normal) >= 0.0 ? 1.0 : -1.0;
-            o = sphere_pos + normal_side * EPSILON * normal;
+            o = sphere_pos;
 
             throughput *= shapes[shape_index].Kr;
         }
