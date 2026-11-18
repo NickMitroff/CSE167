@@ -18,7 +18,8 @@ void predict(uint tid : SV_DispatchThreadID,
     float3 gravity = float3(0, -9.8, 0);
 
     float3 position = positions[tid];
-    // 
+    // old_positions doesn't update automatically!
+    // we have to do it here
     old_positions[tid] = position;
     float3 velocity = velocities[tid];
 
