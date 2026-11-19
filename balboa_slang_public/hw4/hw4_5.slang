@@ -120,6 +120,13 @@ void project_constraints(uint tid : SV_DispatchThreadID,
         float penetration = dot(n, point) - d;
         if (penetration < 0) next_position += -n * penetration;
         // apply friction in tangential direction
+        float3 tangent = next_position - old_positions[tid] - dot(next_position - old_positions[tid], n)*n;
+        if(length(tangent) <= static_friction * penetration){
+            next_position -= tangent;
+        }
+        else{
+            next_position -= normalize(tangent)*kinetic_friction*penetration;
+        }
     }
 
 
