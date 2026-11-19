@@ -131,7 +131,7 @@ void project_constraints(uint tid : SV_DispatchThreadID,
             next_position -= tangent;
         }
         else {
-            next_position -= normalize(tangent) * kinetic_friction * max(0, -penetration);
+            next_position -= normalize(tangent) * min(length(tangent), kinetic_friction * max(0, -penetration));
         }
     }
 

@@ -88,7 +88,8 @@ void detect_collision(uint tid: SV_DispatchThreadID,
     if (inv_masses[tid] == 0) return;
 
     float min_distance = contact_margin + collision_distance;
-
+    float min_tri_distance = min_distance;
+    uint closest_tri = -1;
     float4 contact_plane = float4(0);
     // loop through every plane and sphere
     // and find the one that is the closest
@@ -97,7 +98,6 @@ void detect_collision(uint tid: SV_DispatchThreadID,
     // 0 = sphere, 1 = plane, 2 = trimesh
     int closest_shape_type = -1;
 
-    // sphere SDF = length(point - center) - radius
     for (uint i = 0; i < num_spheres; i++) {
         float3 sphere_center = spheres[i].xyz;
         float radius = spheres[i].w;
@@ -163,32 +163,57 @@ void detect_collision(uint tid: SV_DispatchThreadID,
                 float3 b2 = cp.bary.z;
 
                 float tri_unsigned_distance = length(cp.position - point);
-                if (tri_unsigned_distance < contact_margin + collision_distance) {
-                    // now we get the signed distance
-                    // and check it against min_distance
+                if (tri_unsigned_distance < min_tri_distance) {
+                    min_tri_distance = tri_unsigned_distance;
+                    closest_tri = j;
                     
-                    // Face normal
-                    float3 ng = normalize(cross(p1 - p0, p2 - p0));
-                    // Phong normal
-                    float3 ns = normalize(b0 * n0 + b1 * n1 + b2 * n2);
-                    if (dot(ng, ns) < 0.0) {
-                        ng = -ng;
-                    }
-
-                    float4 plane = float4(ng, dot(ng, cp.position));
-                    float3 n = plane.xyz;
-                    float d = plane.w;
-                    float plane_sdf = dot(n, point) - d;
-                    if (plane_sdf < min_distance) {
-                        min_distance = plane_sdf;
-                        closest_shape = j;
-                        closest_shape_type = 2;
-
-                        // easier to just set the contact plane here
-                        contact_plane = plane;
-                    }
                 }
             }
+        }
+    }
+
+    // now that we have the closest tri in UNSIGNED distance,
+    // use the plane conversion trick to see if it's the closest
+    // in signed (SDF) distance as well
+    if (closest_tri != -1) {
+        int j = closest_tri;
+        // now we get the signed distance
+        // and check it against min_distance
+        uint3 tri = mesh_triangles[j];
+
+        // get vertices
+        float3 p0 = mesh_vertices[tri.x];
+        float3 p1 = mesh_vertices[tri.y];
+        float3 p2 = mesh_vertices[tri.z];
+
+        float3 n0 = mesh_vertex_normals[tri.x];
+        float3 n1 = mesh_vertex_normals[tri.y];
+        float3 n2 = mesh_vertex_normals[tri.z];
+
+        ClosestPoint cp = closest_point_triangle(point, p0, p1, p2);
+
+        float3 b0 = cp.bary.x;
+        float3 b1 = cp.bary.y;
+        float3 b2 = cp.bary.z;
+        // Face normal
+        float3 ng = normalize(cross(p1 - p0, p2 - p0));
+        // Phong normal
+        float3 ns = normalize(b0 * n0 + b1 * n1 + b2 * n2);
+        if (dot(ng, ns) < 0.0) {
+            ng = -ng;
+        }
+
+        float4 plane = float4(ng, dot(ng, cp.position));
+        float3 n = plane.xyz;
+        float d = plane.w;
+        float plane_sdf = dot(n, point) - d;
+        if (plane_sdf < min_distance) {
+            min_distance = plane_sdf;
+            closest_shape = j;
+            closest_shape_type = 2;
+
+            // easier to just set the contact plane here
+            contact_plane = plane;
         }
     }
 
