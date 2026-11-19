@@ -68,7 +68,13 @@ void detect_collision(uint tid : SV_DispatchThreadID,
         if (closest_shape_is_sphere) {
             float3 sphere_center = spheres[closest_shape].xyz;
             float3 unit_normal = normalize(point - sphere_center);
-            contact_plane = float4(unit_normal, dot(unit_normal, point));
+
+            // AI helped debug an issue with this code
+            // Previously, we were using dot(unit_normal, point) to build d
+            // This meant that the contact plane was going through the particle, not the intersection point on the sphere
+            // And because we are allowing a bit of margin for collisions, these may not be the same point
+            // And we want the contact plane to always be going through the intersection point on the sphere.
+            contact_plane = float4(unit_normal, dot(unit_normal, sphere_center) + spheres[closest_shape].w);
         }
         else {
             contact_plane = planes[closest_shape];
@@ -120,12 +126,12 @@ void project_constraints(uint tid : SV_DispatchThreadID,
         float penetration = dot(n, point) - d;
         if (penetration < 0) next_position += -n * penetration;
         // apply friction in tangential direction
-        float3 tangent = next_position - old_positions[tid] - dot(next_position - old_positions[tid], n)*n;
-        if(length(tangent) <= static_friction * penetration){
+        float3 tangent = next_position - old_positions[tid] - dot(next_position - old_positions[tid], n) * n;
+        if(length(tangent) <= static_friction * max(0, -penetration)){
             next_position -= tangent;
         }
-        else{
-            next_position -= normalize(tangent)*kinetic_friction*penetration;
+        else {
+            next_position -= normalize(tangent) * kinetic_friction * max(0, -penetration);
         }
     }
 
