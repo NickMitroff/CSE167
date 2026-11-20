@@ -113,7 +113,7 @@ float3 get_correction(uint2 root_pos, int2 offset,
     float w_j = inv_masses[j];
 
     float weight_frac = w_i / (w_i + w_j);
-    float l_ij = length(float2(spacing.x * abs(neighbor_pos.x - root_pos.x) ,
-        spacing.y * abs(neighbor_pos.y - root_pos.y)));
+    float l_ij = length(float2(spacing.x * offset.x,
+        spacing.y * offset.y));
     return weight_frac * (length(d) - l_ij) * d / length(d);
 }
